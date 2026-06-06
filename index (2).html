@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RevMatch — Feed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="iphone">
+  <div class="screen">
+    <div class="notch"></div>
+
+    <!-- Status bar -->
+    <div class="statusbar">
+      <span>9:41</span>
+      <div class="statusbar-right">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 22h20V2z" opacity="0.9"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="7" width="18" height="10" rx="2" opacity="0.9"/><rect x="21" y="10" width="1.5" height="4" rx="1"/></svg>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">REV<span>MATCH</span></div>
+      <div class="header-icons">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+    </div>
+
+    <!-- Feed view -->
+    <div class="view active" id="view-feed">
+      <div class="feed" id="feed"></div>
+    </div>
+
+    <!-- Meets view -->
+    <div class="view" id="view-meets">
+      <div class="meets-scroll">
+        <div class="meets-intro">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Meets &amp; cruises near Fairfield, NJ
+        </div>
+        <div id="meetsList"></div>
+        <div style="height: 80px;"></div>
+      </div>
+      <button class="meet-fab" onclick="openCreateMeet()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Host
+      </button>
+    </div>
+
+    <!-- Profile view -->
+    <div class="view" id="view-profile">
+      <div class="profile-scroll">
+        <div class="profile-cover"><div class="profile-cover-overlay"></div></div>
+        <div class="profile-head">
+          <div class="profile-avatar">AJ</div>
+          <div class="profile-name-row">
+            <div class="profile-name">ALEX JOHNSON</div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="profile-handle">@you</div>
+          <div class="profile-bio">Track addict. BMW purist. Weekends are for canyon runs. 🏁</div>
+          <div class="profile-loc">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Fairfield, NJ
+          </div>
+
+          <div class="profile-stats">
+            <div class="pstat"><div class="pstat-num" id="statPosts">0</div><div class="pstat-lbl">Posts</div></div>
+            <div class="pstat"><div class="pstat-num" id="statGarage">2</div><div class="pstat-lbl">Garage</div></div>
+            <div class="pstat"><div class="pstat-num" id="statMeets">0</div><div class="pstat-lbl">Meets</div></div>
+            <div class="pstat"><div class="pstat-num">142</div><div class="pstat-lbl">Followers</div></div>
+          </div>
+
+          <button class="profile-edit-btn">Edit profile</button>
+        </div>
+
+        <div class="profile-tabs">
+          <div class="ptab active" onclick="switchPtab('posts', this)">Posts</div>
+          <div class="ptab" onclick="switchPtab('garage', this)">Garage</div>
+          <div class="ptab" onclick="switchPtab('meets', this)">Meets</div>
+        </div>
+
+        <div class="ptab-panel active" id="ptab-posts"></div>
+        <div class="ptab-panel" id="ptab-garage"></div>
+        <div class="ptab-panel" id="ptab-meets"></div>
+      </div>
+    </div>
+
+    <!-- Bottom nav -->
+    <div class="bottomnav">
+      <div class="nav-item active" id="nav-feed" onclick="switchView('feed')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+      <div class="nav-item" onclick="openCreate()">
+        <div class="nav-fab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+      </div>
+      <div class="nav-item" id="nav-meets" onclick="switchView('meets')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="nav-item" id="nav-profile" onclick="switchView('profile')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2"/></svg>
+      </div>
+    </div>
+
+    <!-- Create post screen -->
+    <div class="create-screen" id="createScreen">
+      <div class="create-head">
+        <button class="create-cancel" onclick="closeCreate()">Cancel</button>
+        <div class="create-title">NEW POST</div>
+        <button class="create-share" id="shareBtn" onclick="publishPost()" disabled>Share</button>
+      </div>
+      <div class="create-body">
+        <div class="photo-drop" id="photoDrop" onclick="fakePhoto()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <p>Tap to add a photo of your car</p>
+        </div>
+
+        <label class="field-label">Your car</label>
+        <input class="field-input" id="carInput" placeholder="e.g. 2021 Porsche 911 GT3" oninput="checkForm()">
+
+        <label class="field-label">Caption</label>
+        <textarea class="field-textarea" id="captionInput" rows="3" placeholder="What's new with the build?" oninput="checkForm()"></textarea>
+
+        <label class="field-label">Specs (comma separated)</label>
+        <input class="field-input" id="specsInput" placeholder="e.g. 502 HP, Manual, Bronze TE37">
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">Posted to your feed</div>
+
+    <!-- Create meet screen -->
+    <div class="create-screen" id="meetScreen">
+      <div class="create-head">
+        <button class="create-cancel" onclick="closeCreateMeet()">Cancel</button>
+        <div class="create-title">HOST A MEET</div>
+        <button class="create-share" id="meetShareBtn" onclick="publishMeet()" disabled>Post</button>
+      </div>
+      <div class="create-body">
+        <label class="field-label">Type</label>
+        <div class="type-chips" id="typeChips">
+          <div class="type-chip selected" onclick="selectType(this, 'Cruise')">Cruise</div>
+          <div class="type-chip" onclick="selectType(this, 'Cars & Coffee')">Cars &amp; Coffee</div>
+          <div class="type-chip" onclick="selectType(this, 'Track Day')">Track Day</div>
+          <div class="type-chip" onclick="selectType(this, 'Show')">Show</div>
+          <div class="type-chip" onclick="selectType(this, 'JDM')">JDM</div>
+          <div class="type-chip" onclick="selectType(this, 'Euro')">Euro</div>
+          <div class="type-chip" onclick="selectType(this, 'Open to all')">Open to all</div>
+        </div>
+
+        <label class="field-label">Meet name</label>
+        <input class="field-input" id="meetName" placeholder="e.g. Sunday Morning Canyon Run" oninput="checkMeetForm()">
+
+        <label class="field-label">Date</label>
+        <input class="field-input" id="meetDateInput" type="date" oninput="checkMeetForm()">
+
+        <label class="field-label">Time</label>
+        <input class="field-input" id="meetTime" type="time" oninput="checkMeetForm()">
+
+        <label class="field-label">Meeting spot</label>
+        <input class="field-input" id="meetLoc" placeholder="e.g. Willowbrook Mall lot, Wayne NJ" oninput="checkMeetForm()">
+
+        <label class="field-label">Details</label>
+        <textarea class="field-textarea" id="meetDesc" rows="3" placeholder="Route, what to bring, vibe..."></textarea>
+      </div>
+    </div>
+
+    <div class="home-bar"></div>
+  </div>
+</div>
+
+
+<script src="app.js"></script>
+</body>
+</html>
