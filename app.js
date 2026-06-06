@@ -338,14 +338,100 @@ function resetMeetForm() {
   document.getElementById('meetShareBtn').disabled = true;
 }
 
+/* ── Search ── */
+function handleSearch(q) {
+  document.getElementById('searchClear').style.opacity = q ? '1' : '0';
+  renderSearch(q.trim().toLowerCase());
+}
+
+function clearSearch() {
+  const inp = document.getElementById('searchInput');
+  inp.value = '';
+  inp.focus();
+  handleSearch('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function searchPostCard(p) {
+  return `<div class="search-post-row">
+    <div class="avatar" style="flex-shrink:0;">${escapeHtml(p.init)}</div>
+    <div class="search-post-info">
+      <div class="search-post-name">${escapeHtml(p.name)} ${p.verified ? verifySVG : ''}</div>
+      <div class="search-post-car">${escapeHtml(p.car)}</div>
+      <div class="search-post-caption">${escapeHtml(p.caption)}</div>
+    </div>
+    <div class="search-post-thumb" style="background:${p.bg};">${carSVG}</div>
+  </div>`;
+}
+
+function searchMeetCard(m) {
+  const d = new Date(m.date + 'T00:00:00');
+  const mon = isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  const day = isNaN(d) ? '' : d.getDate();
+  return `<div class="search-meet-row">
+    <div class="search-meet-date">
+      <div class="mini-meet-mon">${mon}</div>
+      <div class="mini-meet-day">${day}</div>
+    </div>
+    <div class="search-meet-info">
+      <div class="search-meet-name">${escapeHtml(m.name)}</div>
+      <div class="search-meet-meta">${escapeHtml(m.type)} · ${escapeHtml(m.loc)}</div>
+    </div>
+    <span class="search-type-pill">${escapeHtml(m.type)}</span>
+  </div>`;
+}
+
+function renderSearch(q) {
+  const container = document.getElementById('searchResults');
+  if (!q) {
+    container.innerHTML =
+      '<div class="search-section-title">POSTS</div>' +
+      posts.map(searchPostCard).join('') +
+      '<div class="search-section-title">MEETS</div>' +
+      meets.map(searchMeetCard).join('') +
+      '<div style="height:80px;"></div>';
+    return;
+  }
+  const matchedPosts = posts.filter(p =>
+    [p.car, p.name, p.handle, p.caption, ...(p.tags || [])].some(s => s.toLowerCase().includes(q))
+  );
+  const matchedMeets = meets.filter(m =>
+    [m.name, m.type, m.loc, m.desc || ''].some(s => s.toLowerCase().includes(q))
+  );
+  if (!matchedPosts.length && !matchedMeets.length) {
+    container.innerHTML = `<div class="search-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <p>No results for <b>"${escapeHtml(q)}"</b></p>
+    </div>`;
+    return;
+  }
+  let html = '';
+  if (matchedPosts.length) {
+    html += '<div class="search-section-title">POSTS</div>' + matchedPosts.map(searchPostCard).join('');
+  }
+  if (matchedMeets.length) {
+    html += '<div class="search-section-title">MEETS</div>' + matchedMeets.map(searchMeetCard).join('');
+  }
+  html += '<div style="height:80px;"></div>';
+  container.innerHTML = html;
+}
+
 /* ── View switching ── */
 function switchView(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');
   document.getElementById('nav-feed').classList.toggle('active', view === 'feed');
+  document.getElementById('nav-search').classList.toggle('active', view === 'search');
   document.getElementById('nav-meets').classList.toggle('active', view === 'meets');
   document.getElementById('nav-profile').classList.toggle('active', view === 'profile');
   if (view === 'profile') renderProfile();
+  if (view === 'search') {
+    renderSearch(document.getElementById('searchInput').value.trim().toLowerCase());
+    setTimeout(() => document.getElementById('searchInput').focus(), 50);
+  }
 }
 
 /* ── Profile ── */
