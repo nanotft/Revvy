@@ -534,6 +534,240 @@ function addGarageCar() {
   renderProfile();
 }
 
+/* ── EPA Car Data ── */
+const EPA_BASE = 'https://www.fueleconomy.gov/ws/rest';
+const EPA_YEAR = 2025;
+const EPA_HDR  = { headers: { Accept: 'application/json' } };
+
+const MAKE_ORIGIN = {
+  'Audi':'German','BMW':'German','Mercedes-Benz':'German','Porsche':'German','Volkswagen':'German',
+  'Toyota':'Japanese','Honda':'Japanese','Nissan':'Japanese','Mazda':'Japanese','Subaru':'Japanese',
+  'Lexus':'Japanese','Acura':'Japanese','Infiniti':'Japanese','Mitsubishi':'Japanese',
+  'Ford':'American','Chevrolet':'American','Dodge':'American','Jeep':'American','Ram':'American',
+  'Cadillac':'American','Lincoln':'American','GMC':'American','Tesla':'American',
+  'Rivian':'American','Lucid':'American','Buick':'American','Chrysler':'American',
+  'Ferrari':'Italian','Lamborghini':'Italian','Alfa Romeo':'Italian','Maserati':'Italian','Fiat':'Italian',
+  'Volvo':'European','Genesis':'Korean','Hyundai':'Korean','Kia':'Korean',
+  'Land Rover':'British','Jaguar':'British','Mini':'British','Polestar':'European',
+  'Rolls-Royce':'British','Bentley':'British','McLaren':'British'
+};
+
+const MAKE_PRICE = {
+  'Toyota':32000,'Honda':29000,'Nissan':30000,'Mazda':31000,'Subaru':28000,
+  'Mitsubishi':24000,'Lexus':52000,'Acura':42000,'Infiniti':45000,
+  'BMW':55000,'Mercedes-Benz':62000,'Audi':50000,'Porsche':90000,'Volkswagen':31000,
+  'Ford':34000,'Chevrolet':32000,'Dodge':34000,'Jeep':39000,'Ram':43000,
+  'Cadillac':62000,'Lincoln':57000,'GMC':46000,'Tesla':50000,'Rivian':72000,
+  'Lucid':95000,'Buick':36000,'Chrysler':34000,
+  'Ferrari':225000,'Lamborghini':245000,'Alfa Romeo':46000,'Maserati':82000,'Fiat':25000,
+  'Volvo':46000,'Genesis':42000,'Hyundai':28000,'Kia':26000,
+  'Land Rover':72000,'Jaguar':62000,'Mini':31000,'Polestar':58000,
+  'Rolls-Royce':350000,'Bentley':210000,'McLaren':215000
+};
+
+const CLASS_SPECS = {
+  'Two Seaters':{power:400,accel:4.0},'Minicompact Cars':{power:290,accel:5.3},
+  'Subcompact Cars':{power:148,accel:8.1},'Compact Cars':{power:182,accel:7.2},
+  'Midsize Cars':{power:220,accel:6.6},'Large Cars':{power:285,accel:5.9},
+  'Small Station Wagons':{power:165,accel:7.6},'Midsize Station Wagons':{power:208,accel:6.9},
+  'Small Sport Utility Vehicles':{power:188,accel:7.5},
+  'Sport Utility Vehicles':{power:275,accel:6.5},
+  'Standard Sport Utility Vehicles':{power:355,accel:6.0},
+  'Small Pickup Trucks':{power:268,accel:7.1},'Standard Pickup Trucks':{power:410,accel:6.1},
+  'Minivans':{power:208,accel:7.8},'Vans, Cargo Type':{power:215,accel:8.3},
+  'Special Purpose Vehicle':{power:248,accel:7.2}
+};
+
+const PREMIUM_MAKES = new Set([
+  'BMW','Mercedes-Benz','Porsche','Cadillac','Lexus','Acura','Infiniti',
+  'Ferrari','Lamborghini','Maserati','Rolls-Royce','Bentley','McLaren','Lucid'
+]);
+
+const MAKE_GRADIENTS = {
+  'Toyota':'linear-gradient(135deg,#1a0000 0%,#3d0000 100%)',
+  'Honda':'linear-gradient(135deg,#1a0000 0%,#2d0000 100%)',
+  'Nissan':'linear-gradient(135deg,#001828 0%,#002438 100%)',
+  'Mazda':'linear-gradient(135deg,#1a0010 0%,#3d0020 100%)',
+  'Subaru':'linear-gradient(135deg,#001a3d 0%,#00264d 100%)',
+  'Lexus':'linear-gradient(135deg,#1a1400 0%,#2e2200 100%)',
+  'Acura':'linear-gradient(135deg,#1a0000 0%,#280000 100%)',
+  'Infiniti':'linear-gradient(135deg,#0d0d1a 0%,#1a1a2d 100%)',
+  'Mitsubishi':'linear-gradient(135deg,#001020 0%,#001828 100%)',
+  'BMW':'linear-gradient(135deg,#0d1830 0%,#0a2545 100%)',
+  'Mercedes-Benz':'linear-gradient(135deg,#0a0d18 0%,#101828 100%)',
+  'Audi':'linear-gradient(135deg,#161616 0%,#282828 100%)',
+  'Porsche':'linear-gradient(135deg,#181200 0%,#281e00 100%)',
+  'Volkswagen':'linear-gradient(135deg,#001325 0%,#002040 100%)',
+  'Ford':'linear-gradient(135deg,#00001a 0%,#00003d 100%)',
+  'Chevrolet':'linear-gradient(135deg,#001800 0%,#002800 100%)',
+  'Dodge':'linear-gradient(135deg,#1a0000 0%,#3d0000 100%)',
+  'Jeep':'linear-gradient(135deg,#001500 0%,#002200 100%)',
+  'Ram':'linear-gradient(135deg,#1a0000 0%,#2d0000 100%)',
+  'Cadillac':'linear-gradient(135deg,#1a1500 0%,#281e00 100%)',
+  'Lincoln':'linear-gradient(135deg,#0d0d1a 0%,#1a1a2d 100%)',
+  'GMC':'linear-gradient(135deg,#001800 0%,#003800 100%)',
+  'Tesla':'linear-gradient(135deg,#100004 0%,#250008 100%)',
+  'Rivian':'linear-gradient(135deg,#001808 0%,#002810 100%)',
+  'Lucid':'linear-gradient(135deg,#001828 0%,#00243d 100%)',
+  'Buick':'linear-gradient(135deg,#0d1525 0%,#1a253d 100%)',
+  'Ferrari':'linear-gradient(135deg,#220000 0%,#550000 100%)',
+  'Lamborghini':'linear-gradient(135deg,#1a1400 0%,#504000 100%)',
+  'Alfa Romeo':'linear-gradient(135deg,#1e0000 0%,#3d0000 50%,#001a3d 100%)',
+  'Maserati':'linear-gradient(135deg,#001828 0%,#002640 100%)',
+  'Fiat':'linear-gradient(135deg,#001a38 0%,#00264d 100%)',
+  'Volvo':'linear-gradient(135deg,#001828 0%,#002640 100%)',
+  'Genesis':'linear-gradient(135deg,#0d0d18 0%,#1a1a28 100%)',
+  'Hyundai':'linear-gradient(135deg,#001828 0%,#00264d 100%)',
+  'Kia':'linear-gradient(135deg,#1a0018 0%,#2d0028 100%)',
+  'Land Rover':'linear-gradient(135deg,#001400 0%,#002000 100%)',
+  'Jaguar':'linear-gradient(135deg,#080808 0%,#181818 100%)',
+  'Mini':'linear-gradient(135deg,#150015 0%,#220022 100%)',
+  'Polestar':'linear-gradient(135deg,#080808 0%,#181818 100%)',
+  'Rolls-Royce':'linear-gradient(135deg,#151000 0%,#261e00 100%)',
+  'Bentley':'linear-gradient(135deg,#001808 0%,#002810 100%)',
+  'McLaren':'linear-gradient(135deg,#1a0800 0%,#2d1000 100%)'
+};
+
+function getMakeOrigin(make) { return MAKE_ORIGIN[make] || ''; }
+
+function estimatePrice(make, vclass) {
+  const base = MAKE_PRICE[make] || 35000;
+  let mult = 1;
+  if (vclass.includes('Standard Sport Utility')) mult = 1.3;
+  else if (vclass.includes('Standard Pickup')) mult = 1.2;
+  else if (vclass === 'Two Seaters') mult = 1.6;
+  else if (vclass.includes('Subcompact') || vclass.includes('Small')) mult = 0.85;
+  return Math.round(base * mult / 500) * 500;
+}
+
+function getClassSpecs(vclass) {
+  for (const [cls, s] of Object.entries(CLASS_SPECS)) {
+    if (vclass === cls || vclass.startsWith(cls)) return s;
+  }
+  if (vclass.includes('Pickup')) return { power: 380, accel: 6.5 };
+  if (vclass.includes('Sport Utility') || vclass.includes('SUV')) return { power: 275, accel: 6.5 };
+  if (vclass.includes('Van')) return { power: 210, accel: 7.8 };
+  return { power: 200, accel: 7.0 };
+}
+
+function estimatePower(make, vclass, isEV) {
+  const s = getClassSpecs(vclass);
+  const p = Math.round(s.power * (PREMIUM_MAKES.has(make) ? 1.35 : 1));
+  return isEV ? Math.round(p * 1.45) : p;
+}
+
+function estimateAccel(make, vclass, isEV) {
+  const s = getClassSpecs(vclass);
+  const a = parseFloat((s.accel * (PREMIUM_MAKES.has(make) ? 0.78 : 1)).toFixed(1));
+  return isEV ? parseFloat((a * 0.7).toFixed(1)) : a;
+}
+
+function getMakeGradient(make) {
+  return MAKE_GRADIENTS[make] || 'linear-gradient(135deg,#181818 0%,#282828 100%)';
+}
+
+function mapVClassToType(vclass) {
+  if (vclass === 'Two Seaters' || vclass === 'Minicompact Cars') return 'Sports';
+  if (vclass.includes('Pickup')) return 'Truck';
+  if (vclass.includes('Sport Utility') || vclass.includes('Special Purpose')) return 'SUV';
+  return 'Sedan';
+}
+
+function generateDesc(make, model, vclass, drive, fuelType, mpg) {
+  const isEV = fuelType.toLowerCase().includes('electric');
+  const isPremium = PREMIUM_MAKES.has(make);
+  const drv = drive.replace('-Wheel Drive','WD').replace('All-Wheel Drive','AWD') || 'AWD';
+  if (isEV) return `The ${make} ${model} delivers instant torque with ${mpg || 100} MPGe combined. Zero emissions, serious performance.`;
+  if (vclass.includes('Pickup')) return `${make}'s ${model} combines ${drv} capability with modern tech and comfort. Built to work hard and look good.`;
+  if (vclass === 'Two Seaters' || vclass === 'Minicompact Cars') return `Pure performance from ${make}. The ${model} strips away everything unnecessary — just driver, road, and thrills.`;
+  if (vclass.includes('Sport Utility')) return `The ${make} ${model} brings ${drv} confidence with room for the whole crew. Practical on paper, exciting in reality.`;
+  if (isPremium) return `${make}'s ${model} blends precision engineering with refined luxury. A statement machine with real driving substance.`;
+  return `The ${make} ${model} balances everyday efficiency with reliability. ${mpg ? mpg + ' MPG combined — ' : ''}sensible without being boring.`;
+}
+
+function epaToCard(v) {
+  if (!v?.make || !v?.model) return null;
+  const fuel = (v.fuelType1 || v.fuelType || '').toLowerCase();
+  const isEV = fuel.includes('electric') && !fuel.includes('plug-in hybrid');
+  const type = isEV ? 'EV' : mapVClassToType(v.VClass || '');
+  const brand = getMakeOrigin(v.make);
+  const vclass = v.VClass || '';
+  const price = estimatePrice(v.make, vclass);
+  const power = estimatePower(v.make, vclass, isEV);
+  const accel = estimateAccel(v.make, vclass, isEV);
+  const mpg = isEV ? (v.combA08 || v.comb08 || 100) : v.comb08;
+  const economy = isEV ? `${mpg} MPGe` : `${v.city08 || '--'}/${v.hwy08 || '--'} MPG`;
+  const drive = (v.drive || '')
+    .replace('Front-Wheel Drive','FWD').replace('Rear-Wheel Drive','RWD')
+    .replace('All-Wheel Drive','AWD').replace('4-Wheel Drive','4WD')
+    .replace('4-Wheel or All-Wheel Drive','AWD').replace('Part-time 4-Wheel Drive','4WD');
+  const engine = isEV ? 'Electric Motor'
+    : v.displ ? `${parseFloat(v.displ).toFixed(1)}L${v.cylinders ? ' ' + v.cylinders + '-Cyl' : ''}` : '';
+  const trans = v.trany ? (v.trany.toLowerCase().startsWith('manual') ? 'Manual' : 'Automatic') : '';
+  const tags = [drive, engine, trans].filter(t => t && t.trim());
+  return {
+    id: v.id, year: v.year || EPA_YEAR,
+    make: v.make, model: v.model,
+    type, brand, price,
+    power: `${power} HP`, accel: `${accel}s`, economy,
+    desc: generateDesc(v.make, v.model, vclass, v.drive || '', v.fuelType1 || '', mpg),
+    tags, bg: getMakeGradient(v.make)
+  };
+}
+
+function normItems(data) {
+  if (!data?.menuItem) return [];
+  return Array.isArray(data.menuItem) ? data.menuItem : [data.menuItem];
+}
+
+async function loadCarsFromEPA() {
+  const get = path => fetch(`${EPA_BASE}/${path}`, EPA_HDR).then(r => r.json());
+
+  const allMakes = normItems(await get(`vehicle/menu/make?year=${EPA_YEAR}`)).map(m => m.text);
+  const knownMakes = new Set(Object.keys(MAKE_ORIGIN));
+  let makes = matchPrefs.brand !== 'Any'
+    ? allMakes.filter(m => getMakeOrigin(m) === matchPrefs.brand)
+    : allMakes.filter(m => knownMakes.has(m));
+  if (!makes.length) return [];
+  makes = makes.slice(0, 10);
+
+  const modelLists = await Promise.all(
+    makes.map(make =>
+      get(`vehicle/menu/model?year=${EPA_YEAR}&make=${encodeURIComponent(make)}`)
+        .then(d => ({ make, models: normItems(d).map(m => m.text) }))
+        .catch(() => ({ make, models: [] }))
+    )
+  );
+
+  const pairs = [];
+  for (const { make, models } of modelLists) {
+    models.slice(0, 3).forEach(model => pairs.push({ make, model }));
+  }
+
+  const idList = await Promise.all(
+    pairs.map(({ make, model }) =>
+      get(`vehicle/menu/options?year=${EPA_YEAR}&make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`)
+        .then(d => { const items = normItems(d); return items.length ? items[0].value : null; })
+        .catch(() => null)
+    )
+  );
+
+  const vehicles = await Promise.all(
+    idList.filter(Boolean).map(id => get(`vehicle/${id}`).catch(() => null))
+  );
+
+  return vehicles.filter(Boolean).map(epaToCard).filter(card => {
+    if (!card) return false;
+    const p = card.price, b = matchPrefs.budget;
+    if (b === 'u40'    && p >= 40000) return false;
+    if (b === '40-70'  && (p < 40000 || p >= 70000)) return false;
+    if (b === '70-100' && (p < 70000 || p >= 100000)) return false;
+    if (b === '100+'   && p < 100000) return false;
+    if (matchPrefs.carType !== 'Any' && card.type !== matchPrefs.carType) return false;
+    return true;
+  });
+}
+
 /* ── Match / Car Discover ── */
 const newCars = [
   { id:1, year:2025, make:"Toyota", model:"GR86 Premium", type:"Sports", brand:"Japanese",
@@ -690,14 +924,22 @@ function filterCars() {
   });
 }
 
-function startSwiping() {
-  const filtered = filterCars();
-  if (!filtered.length) { showToast("No matches — try broader preferences"); return; }
-  swipeQueue = [...filtered].sort(() => Math.random() - 0.5);
-  swipeIndex = 0;
+async function startSwiping() {
   document.getElementById('matchPref').style.display = 'none';
   const deck = document.getElementById('matchDeck');
   deck.style.display = 'flex';
+  document.getElementById('swipeActions').style.display = 'none';
+  document.getElementById('swipeDeck').innerHTML =
+    `<div class="swipe-loading"><div class="swipe-spinner"></div><p>Finding your matches…</p></div>`;
+  document.getElementById('swipeCounter').textContent = 'Loading…';
+
+  let cars = [];
+  try { cars = await loadCarsFromEPA(); } catch(e) {}
+  if (!cars.length) cars = filterCars();
+  if (!cars.length) { showToast("No matches — try broader preferences"); backToPrefs(); return; }
+
+  swipeQueue = [...cars].sort(() => Math.random() - 0.5);
+  swipeIndex = 0;
   document.getElementById('swipeActions').style.display = 'flex';
   renderSwipeDeck();
 }
