@@ -113,7 +113,16 @@ const bgOptions = [
 ];
 
 function renderFeed() {
-  document.getElementById('feed').innerHTML = posts.map((p, i) => `
+  const discoverBanner = `<div class="discover-banner" onclick="openMatch()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.65"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2m-6 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0m-8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/></svg>
+    <div class="discover-eyebrow">REVMATCH · NEW CARS</div>
+    <div class="discover-title">FIND YOUR<br>NEXT CAR</div>
+    <div class="discover-sub">Swipe through new cars matched to your budget and style</div>
+    <div class="discover-cta">Start Matching
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </div>
+  </div>`;
+  document.getElementById('feed').innerHTML = discoverBanner + posts.map((p, i) => `
     <div class="post">
       <div class="post-head">
         <div class="avatar">${p.init}</div>
@@ -357,11 +366,11 @@ function escapeHtml(s) {
 
 function searchPostCard(p) {
   return `<div class="search-post-row">
-    <div class="avatar" style="flex-shrink:0;">${escapeHtml(p.init)}</div>
-    <div class="search-post-info">
-      <div class="search-post-name">${escapeHtml(p.name)} ${p.verified ? verifySVG : ''}</div>
+    <div class="avatar">${escapeHtml(p.init)}</div>
+    <div class="post-user">
+      <div class="post-name">${escapeHtml(p.name)}${p.verified ? ' ' + verifySVG : ''}</div>
       <div class="search-post-car">${escapeHtml(p.car)}</div>
-      <div class="search-post-caption">${escapeHtml(p.caption)}</div>
+      <div class="post-meta search-post-caption">${escapeHtml(p.caption)}</div>
     </div>
     <div class="search-post-thumb" style="background:${p.bg};">${carSVG}</div>
   </div>`;
@@ -371,16 +380,16 @@ function searchMeetCard(m) {
   const d = new Date(m.date + 'T00:00:00');
   const mon = isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
   const day = isNaN(d) ? '' : d.getDate();
-  return `<div class="search-meet-row">
-    <div class="search-meet-date">
+  return `<div class="mini-meet">
+    <div class="mini-meet-date">
       <div class="mini-meet-mon">${mon}</div>
       <div class="mini-meet-day">${day}</div>
     </div>
-    <div class="search-meet-info">
-      <div class="search-meet-name">${escapeHtml(m.name)}</div>
-      <div class="search-meet-meta">${escapeHtml(m.type)} · ${escapeHtml(m.loc)}</div>
+    <div class="mini-meet-info">
+      <div class="mini-meet-name">${escapeHtml(m.name)}</div>
+      <div class="mini-meet-loc">${escapeHtml(m.loc)}</div>
     </div>
-    <span class="search-type-pill">${escapeHtml(m.type)}</span>
+    <div class="mini-meet-badge">${escapeHtml(m.type)}</div>
   </div>`;
 }
 
@@ -391,7 +400,7 @@ function renderSearch(q) {
       '<div class="search-section-title">POSTS</div>' +
       posts.map(searchPostCard).join('') +
       '<div class="search-section-title">MEETS</div>' +
-      meets.map(searchMeetCard).join('') +
+      '<div class="search-meets-wrap">' + meets.map(searchMeetCard).join('') + '</div>' +
       '<div style="height:80px;"></div>';
     return;
   }
@@ -413,7 +422,8 @@ function renderSearch(q) {
     html += '<div class="search-section-title">POSTS</div>' + matchedPosts.map(searchPostCard).join('');
   }
   if (matchedMeets.length) {
-    html += '<div class="search-section-title">MEETS</div>' + matchedMeets.map(searchMeetCard).join('');
+    html += '<div class="search-section-title">MEETS</div>' +
+      '<div class="search-meets-wrap">' + matchedMeets.map(searchMeetCard).join('') + '</div>';
   }
   html += '<div style="height:80px;"></div>';
   container.innerHTML = html;
@@ -523,6 +533,298 @@ function addGarageCar() {
   saveGarage();
   renderProfile();
 }
+
+/* ── Match / Car Discover ── */
+const newCars = [
+  { id:1, year:2025, make:"Toyota", model:"GR86 Premium", type:"Sports", brand:"Japanese",
+    price:29295, power:"228 HP", accel:"6.1s", economy:"21/32 MPG",
+    desc:"Pure rear-wheel-drive sports car. Flat-six buzz, track-tuned suspension, zero fat.",
+    tags:["RWD","6-Speed Manual","Torsen LSD"],
+    bg:"radial-gradient(ellipse at 40% 30%, #2a1a06 0%, #0f0803 100%)" },
+  { id:2, year:2025, make:"Subaru", model:"BRZ Limited", type:"Sports", brand:"Japanese",
+    price:31095, power:"228 HP", accel:"6.1s", economy:"21/32 MPG",
+    desc:"Co-developed with Toyota. Perfectly balanced lightweight coupe with Brembo brakes.",
+    tags:["RWD","6-Speed Manual","Brembo Brakes"],
+    bg:"radial-gradient(ellipse at 60% 40%, #061520 0%, #020a10 100%)" },
+  { id:3, year:2025, make:"Mazda", model:"MX-5 Miata RF", type:"Sports", brand:"Japanese",
+    price:37125, power:"181 HP", accel:"5.9s", economy:"26/34 MPG",
+    desc:"The purest driving machine. Retractable fastback roof, perfect 50/50 weight balance.",
+    tags:["RWD","6-Speed Manual","50/50 Balance"],
+    bg:"radial-gradient(ellipse at 50% 40%, #1a1206 0%, #0a0803 100%)" },
+  { id:4, year:2025, make:"Ford", model:"Mustang GT", type:"Sports", brand:"American",
+    price:38690, power:"480 HP", accel:"4.2s", economy:"15/24 MPG",
+    desc:"The legend reborn. All-new platform with 5.0L Coyote V8 fury and MagneRide.",
+    tags:["RWD","5.0L V8","MagneRide"],
+    bg:"radial-gradient(ellipse at 50% 30%, #200606 0%, #0f0202 100%)" },
+  { id:5, year:2025, make:"Honda", model:"Civic Type R", type:"Sports", brand:"Japanese",
+    price:44990, power:"315 HP", accel:"5.0s", economy:"22/28 MPG",
+    desc:"Best FWD car ever made. Nürburgring-proven, three-mode adaptive dampers.",
+    tags:["FWD","6-Speed Manual","Adaptive Dampers"],
+    bg:"radial-gradient(ellipse at 40% 35%, #200808 0%, #0f0404 100%)" },
+  { id:6, year:2025, make:"Subaru", model:"WRX TR", type:"Sedan", brand:"Japanese",
+    price:42695, power:"271 HP", accel:"5.5s", economy:"19/26 MPG",
+    desc:"Rally heritage meets daily practicality. Symmetrical AWD, flat-four rumble.",
+    tags:["Symmetrical AWD","6-Speed Manual","STI Suspension"],
+    bg:"radial-gradient(ellipse at 50% 35%, #0a1020 0%, #040810 100%)" },
+  { id:7, year:2025, make:"VW", model:"Golf R", type:"Sedan", brand:"German",
+    price:45595, power:"315 HP", accel:"4.7s", economy:"20/29 MPG",
+    desc:"The ultimate sleeper. R-Performance torque vectoring AWD. Subtlety is the point.",
+    tags:["4Motion AWD","DSG","R Performance"],
+    bg:"radial-gradient(ellipse at 45% 35%, #101520 0%, #08101a 100%)" },
+  { id:8, year:2025, make:"Dodge", model:"Challenger R/T Scat Pack", type:"Sports", brand:"American",
+    price:54290, power:"485 HP", accel:"4.0s", economy:"15/23 MPG",
+    desc:"Last of the American V8 muscle. 392 HEMI roar, line-lock, launch control.",
+    tags:["RWD","6.4L HEMI V8","Line Lock"],
+    bg:"radial-gradient(ellipse at 45% 30%, #1a1005 0%, #0f0803 100%)" },
+  { id:9, year:2025, make:"BMW", model:"M2", type:"Sports", brand:"German",
+    price:65900, power:"453 HP", accel:"4.1s", economy:"16/23 MPG",
+    desc:"The last pure BMW M car. Rear-wheel-drive manual. No nonsense, all thrill.",
+    tags:["RWD","6-Speed Manual","M Traction Control"],
+    bg:"radial-gradient(ellipse at 40% 35%, #0d1525 0%, #060a0f 100%)" },
+  { id:10, year:2025, make:"Audi", model:"RS3 Sedan", type:"Sedan", brand:"German",
+    price:60495, power:"401 HP", accel:"3.8s", economy:"19/28 MPG",
+    desc:"Five-cylinder fury. Torque vectoring RS Quattro AWD with drift mode.",
+    tags:["RS Quattro AWD","5-Cyl Turbo","Drift Mode"],
+    bg:"radial-gradient(ellipse at 50% 35%, #100f0a 0%, #090808 100%)" },
+  { id:11, year:2025, make:"Tesla", model:"Model 3 Performance", type:"EV", brand:"American",
+    price:50990, power:"510 HP", accel:"2.9s", economy:"315mi Range",
+    desc:"0-60 under 3 seconds. Track Mode, Brembo brakes, carbon fiber aero. Silent devastation.",
+    tags:["AWD","315mi Range","Track Mode"],
+    bg:"radial-gradient(ellipse at 50% 35%, #041a10 0%, #020c08 100%)" },
+  { id:12, year:2025, make:"Porsche", model:"Cayman S", type:"Sports", brand:"German",
+    price:75300, power:"375 HP", accel:"4.0s", economy:"19/26 MPG",
+    desc:"Mid-engine balance, flat-six sound. The sports car driver's sports car.",
+    tags:["RWD","PDK or 6MT","PASM"],
+    bg:"radial-gradient(ellipse at 45% 30%, #181510 0%, #0c0b08 100%)" },
+  { id:13, year:2025, make:"BMW", model:"X3 M Competition", type:"SUV", brand:"German",
+    price:78900, power:"503 HP", accel:"3.9s", economy:"15/20 MPG",
+    desc:"M power in SUV form. Same S58 engine as the M3, wrapped in commanding presence.",
+    tags:["xDrive AWD","S58 Twin-Turbo","Adaptive M Susp"],
+    bg:"radial-gradient(ellipse at 40% 30%, #0d1525 0%, #060a0f 100%)" },
+  { id:14, year:2025, make:"Ford", model:"F-150 Raptor", type:"Truck", brand:"American",
+    price:72545, power:"450 HP", accel:"5.5s", economy:"15/18 MPG",
+    desc:"The off-road performance truck. FOX Live Valve suspension, 37-inch tires standard.",
+    tags:["4WD","FOX Suspension","37-in Tires"],
+    bg:"radial-gradient(ellipse at 50% 30%, #1a1006 0%, #0a0803 100%)" },
+  { id:15, year:2025, make:"BMW", model:"M4 Competition", type:"Sports", brand:"German",
+    price:82900, power:"503 HP", accel:"3.7s", economy:"16/23 MPG",
+    desc:"Four-door performance without compromise. S58 inline-six to 7,200 RPM.",
+    tags:["xDrive AWD","Carbon Exterior Pkg","Laser Lights"],
+    bg:"radial-gradient(ellipse at 40% 30%, #0d1525 0%, #060a0f 100%)" },
+  { id:16, year:2025, make:"BMW", model:"M3 Competition", type:"Sedan", brand:"German",
+    price:87900, power:"503 HP", accel:"3.8s", economy:"17/25 MPG",
+    desc:"The benchmark sports sedan. Hand-built S58 screams to 7,200 RPM. Legendary.",
+    tags:["xDrive AWD","Carbon Roof","M Bucket Seats"],
+    bg:"radial-gradient(ellipse at 40% 30%, #0d2240 0%, #07101a 100%)" },
+  { id:17, year:2025, make:"Alfa Romeo", model:"Giulia Quadrifoglio", type:"Sedan", brand:"Italian",
+    price:83195, power:"505 HP", accel:"3.8s", economy:"17/24 MPG",
+    desc:"Ferrari-derived V6, Italian passion in four doors. Nothing else sounds like it.",
+    tags:["RWD","Ferrari-derived V6","Carbon Driveshaft"],
+    bg:"radial-gradient(ellipse at 50% 30%, #200808 0%, #0f0404 100%)" },
+  { id:18, year:2025, make:"Tesla", model:"Model S Plaid", type:"EV", brand:"American",
+    price:89990, power:"1,020 HP", accel:"1.99s", economy:"396mi Range",
+    desc:"Quickest accelerating production car ever. Tri-motor madness. Yoke steering.",
+    tags:["AWD","396mi Range","Tri-Motor"],
+    bg:"radial-gradient(ellipse at 50% 30%, #041510 0%, #020a08 100%)" },
+  { id:19, year:2025, make:"Porsche", model:"911 Carrera S", type:"Sports", brand:"German",
+    price:122900, power:"473 HP", accel:"3.4s", economy:"18/24 MPG",
+    desc:"Rear-engine, rear-drive perfection. 60 years of engineering excellence distilled.",
+    tags:["RWD","PDK","PASM Sport Chrono"],
+    bg:"radial-gradient(ellipse at 45% 30%, #181510 0%, #0c0b08 100%)" },
+  { id:20, year:2025, make:"Ferrari", model:"Roma", type:"Sports", brand:"Italian",
+    price:230000, power:"620 HP", accel:"3.4s", economy:"15/21 MPG",
+    desc:"La Dolce Vita in motion. Front-mid V8 twin-turbo, the most beautiful Ferrari in years.",
+    tags:["RWD","3.9L Twin-Turbo V8","E-Diff"],
+    bg:"radial-gradient(ellipse at 50% 30%, #1a0505 0%, #0f0303 100%)" },
+  { id:21, year:2025, make:"Lamborghini", model:"Huracán EVO", type:"Sports", brand:"Italian",
+    price:261274, power:"631 HP", accel:"2.9s", economy:"13/18 MPG",
+    desc:"Naturally aspirated V10 — the last of its kind. Pure, raw, unforgettable.",
+    tags:["AWD","5.2L V10 NA","LDVI System"],
+    bg:"radial-gradient(ellipse at 50% 30%, #1a1505 0%, #0f0c02 100%)" }
+];
+
+let matchPrefs = { budget: 'any', carType: 'Any', brand: 'Any' };
+let swipeQueue = [];
+let swipeIndex = 0;
+let isDragging = false;
+let dragStartX = 0;
+let dragCurrentX = 0;
+let likedCars = (() => {
+  try { return JSON.parse(localStorage.getItem('revmatch_liked') || '[]'); } catch(e) { return []; }
+})();
+
+function saveLikedCars() {
+  try { localStorage.setItem('revmatch_liked', JSON.stringify(likedCars)); } catch(e) {}
+}
+
+function openMatch() { document.getElementById('matchScreen').classList.add('open'); }
+function closeMatch() {
+  document.getElementById('matchScreen').classList.remove('open');
+  setTimeout(() => {
+    document.getElementById('matchDeck').style.display = 'none';
+    document.getElementById('matchPref').style.display = 'flex';
+  }, 320);
+}
+function backToPrefs() {
+  document.getElementById('matchDeck').style.display = 'none';
+  document.getElementById('matchPref').style.display = 'flex';
+}
+
+function selectMatchPref(key, val, el, chipsId) {
+  document.querySelectorAll('#' + chipsId + ' .type-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  matchPrefs[key] = val;
+}
+
+function filterCars() {
+  return newCars.filter(car => {
+    const p = car.price;
+    const b = matchPrefs.budget;
+    if (b === 'u40'  && p >= 40000) return false;
+    if (b === '40-70' && (p < 40000 || p >= 70000)) return false;
+    if (b === '70-100' && (p < 70000 || p >= 100000)) return false;
+    if (b === '100+' && p < 100000) return false;
+    if (matchPrefs.carType !== 'Any' && car.type !== matchPrefs.carType) return false;
+    if (matchPrefs.brand !== 'Any' && car.brand !== matchPrefs.brand) return false;
+    return true;
+  });
+}
+
+function startSwiping() {
+  const filtered = filterCars();
+  if (!filtered.length) { showToast("No matches — try broader preferences"); return; }
+  swipeQueue = [...filtered].sort(() => Math.random() - 0.5);
+  swipeIndex = 0;
+  document.getElementById('matchPref').style.display = 'none';
+  const deck = document.getElementById('matchDeck');
+  deck.style.display = 'flex';
+  document.getElementById('swipeActions').style.display = 'flex';
+  renderSwipeDeck();
+}
+
+function renderSwipeDeck() {
+  const deck = document.getElementById('swipeDeck');
+  const remaining = swipeQueue.length - swipeIndex;
+
+  if (swipeIndex >= swipeQueue.length) {
+    deck.innerHTML = `<div class="swipe-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      <div class="swipe-empty-title">That's all of them</div>
+      <div class="swipe-empty-sub">You saved ${likedCars.length} car${likedCars.length !== 1 ? 's' : ''}. Change preferences to see more.</div>
+      <button class="match-go-btn" style="margin-top:20px;" onclick="backToPrefs()">Change Preferences</button>
+    </div>`;
+    document.getElementById('swipeActions').style.display = 'none';
+    document.getElementById('swipeCounter').textContent = '';
+    return;
+  }
+
+  document.getElementById('swipeCounter').textContent = remaining + ' left';
+  const car = swipeQueue[swipeIndex];
+  const next = swipeQueue[swipeIndex + 1];
+
+  deck.innerHTML = (next ? `<div class="swipe-card-next" style="background:${next.bg};"></div>` : '') +
+    `<div class="swipe-card" id="activeCard">
+      <div class="swipe-card-img" style="background:${car.bg};">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.65"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2m-6 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0m-8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/></svg>
+        <div class="swipe-like-label">LIKE</div>
+        <div class="swipe-pass-label">PASS</div>
+        <div class="swipe-card-badge">${car.type}</div>
+        <div class="swipe-card-origin">${car.brand}</div>
+      </div>
+      <div class="swipe-card-info">
+        <div>
+          <div class="swipe-card-price">$${car.price.toLocaleString()}</div>
+          <div class="swipe-card-name">${car.year} ${car.make} ${car.model}</div>
+        </div>
+        <div class="swipe-card-stats">
+          <div class="swipe-stat"><div class="swipe-stat-val">${car.power}</div><div class="swipe-stat-lbl">Power</div></div>
+          <div class="swipe-stat"><div class="swipe-stat-val">${car.accel}</div><div class="swipe-stat-lbl">0-60</div></div>
+          <div class="swipe-stat"><div class="swipe-stat-val">${car.economy}</div><div class="swipe-stat-lbl">Economy</div></div>
+        </div>
+        <div class="swipe-card-specs">${car.tags.map(t => `<span class="spec">${t}</span>`).join('')}</div>
+        <div class="swipe-card-desc">${car.desc}</div>
+      </div>
+    </div>`;
+
+  attachSwipeListeners();
+}
+
+function attachSwipeListeners() {
+  const card = document.getElementById('activeCard');
+  if (!card) return;
+  card.addEventListener('mousedown', onDragStart);
+  card.addEventListener('touchstart', onDragStart, { passive: true });
+}
+
+function onDragStart(e) {
+  isDragging = true;
+  dragStartX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+  const card = document.getElementById('activeCard');
+  if (card) { card.style.transition = 'none'; }
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('touchmove', onDragMove, { passive: true });
+  document.addEventListener('mouseup', onDragEnd, { once: true });
+  document.addEventListener('touchend', onDragEnd, { once: true });
+}
+
+function onDragMove(e) {
+  if (!isDragging) return;
+  const card = document.getElementById('activeCard');
+  if (!card) return;
+  dragCurrentX = (e.type === 'touchmove' ? e.touches[0].clientX : e.clientX) - dragStartX;
+  card.style.transform = `translateX(${dragCurrentX}px) rotate(${dragCurrentX * 0.055}deg)`;
+  const like = card.querySelector('.swipe-like-label');
+  const pass = card.querySelector('.swipe-pass-label');
+  if (dragCurrentX > 20) {
+    like.style.opacity = Math.min(1, (dragCurrentX - 20) / 60);
+    pass.style.opacity = 0;
+  } else if (dragCurrentX < -20) {
+    pass.style.opacity = Math.min(1, (-dragCurrentX - 20) / 60);
+    like.style.opacity = 0;
+  } else {
+    like.style.opacity = 0;
+    pass.style.opacity = 0;
+  }
+}
+
+function onDragEnd() {
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('touchmove', onDragMove);
+  if (!isDragging) return;
+  isDragging = false;
+  if (dragCurrentX > 90) { animateCardOut('right'); }
+  else if (dragCurrentX < -90) { animateCardOut('left'); }
+  else {
+    const card = document.getElementById('activeCard');
+    if (card) {
+      card.style.transition = 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1)';
+      card.style.transform = '';
+      card.querySelector('.swipe-like-label').style.opacity = 0;
+      card.querySelector('.swipe-pass-label').style.opacity = 0;
+    }
+  }
+  dragCurrentX = 0;
+}
+
+function animateCardOut(direction) {
+  const card = document.getElementById('activeCard');
+  if (!card) return;
+  const x = direction === 'right' ? 520 : -520;
+  const r = direction === 'right' ? 28 : -28;
+  card.style.transition = 'transform 0.36s ease-out, opacity 0.36s';
+  card.style.transform = `translateX(${x}px) rotate(${r}deg)`;
+  card.style.opacity = '0';
+  if (direction === 'right') {
+    const saved = swipeQueue[swipeIndex];
+    likedCars.push(saved);
+    saveLikedCars();
+    setTimeout(() => showToast(`${saved.make} ${saved.model} saved!`), 80);
+  }
+  setTimeout(() => { swipeIndex++; renderSwipeDeck(); }, 360);
+}
+
+function swipeLeft()  { if (swipeIndex < swipeQueue.length) animateCardOut('left'); }
+function swipeRight() { if (swipeIndex < swipeQueue.length) animateCardOut('right'); }
 
 /* ── Toast ── */
 let toastTimer;

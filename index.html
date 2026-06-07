@@ -156,6 +156,78 @@
     <!-- Toast -->
     <div class="toast" id="toast">Posted to your feed</div>
 
+    <!-- Match/Discover screen -->
+    <div class="create-screen" id="matchScreen">
+
+      <!-- Panel 1: Preferences -->
+      <div id="matchPref" style="display:flex;flex-direction:column;height:100%;">
+        <div class="create-head">
+          <button class="create-cancel" onclick="closeMatch()">Cancel</button>
+          <div class="create-title">FIND YOUR CAR</div>
+          <div style="width:60px;"></div>
+        </div>
+        <div class="create-body">
+          <p class="match-subtitle">Set your preferences and we'll match you with new cars available near you.</p>
+
+          <label class="field-label">Budget</label>
+          <div class="type-chips" id="budgetChips">
+            <div class="type-chip selected" onclick="selectMatchPref('budget','any',this,'budgetChips')">Any</div>
+            <div class="type-chip" onclick="selectMatchPref('budget','u40',this,'budgetChips')">Under $40k</div>
+            <div class="type-chip" onclick="selectMatchPref('budget','40-70',this,'budgetChips')">$40k – $70k</div>
+            <div class="type-chip" onclick="selectMatchPref('budget','70-100',this,'budgetChips')">$70k – $100k</div>
+            <div class="type-chip" onclick="selectMatchPref('budget','100+',this,'budgetChips')">$100k+</div>
+          </div>
+
+          <label class="field-label">Body Type</label>
+          <div class="type-chips" id="typeMatchChips">
+            <div class="type-chip selected" onclick="selectMatchPref('carType','Any',this,'typeMatchChips')">Any</div>
+            <div class="type-chip" onclick="selectMatchPref('carType','Sedan',this,'typeMatchChips')">Sedan</div>
+            <div class="type-chip" onclick="selectMatchPref('carType','Sports',this,'typeMatchChips')">Sports</div>
+            <div class="type-chip" onclick="selectMatchPref('carType','SUV',this,'typeMatchChips')">SUV</div>
+            <div class="type-chip" onclick="selectMatchPref('carType','Truck',this,'typeMatchChips')">Truck</div>
+            <div class="type-chip" onclick="selectMatchPref('carType','EV',this,'typeMatchChips')">EV</div>
+          </div>
+
+          <label class="field-label">Origin</label>
+          <div class="type-chips" id="brandChips">
+            <div class="type-chip selected" onclick="selectMatchPref('brand','Any',this,'brandChips')">Any</div>
+            <div class="type-chip" onclick="selectMatchPref('brand','German',this,'brandChips')">German</div>
+            <div class="type-chip" onclick="selectMatchPref('brand','Japanese',this,'brandChips')">Japanese</div>
+            <div class="type-chip" onclick="selectMatchPref('brand','American',this,'brandChips')">American</div>
+            <div class="type-chip" onclick="selectMatchPref('brand','Italian',this,'brandChips')">Italian</div>
+          </div>
+
+          <button class="match-go-btn" onclick="startSwiping()">
+            Find My Matches
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Panel 2: Swipe deck -->
+      <div id="matchDeck" style="display:none;flex-direction:column;height:100%;">
+        <div class="match-deck-head">
+          <button class="match-back-btn" onclick="backToPrefs()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="match-deck-title">YOUR MATCHES</div>
+          <div class="swipe-counter" id="swipeCounter"></div>
+        </div>
+        <div class="swipe-area">
+          <div class="swipe-deck" id="swipeDeck"></div>
+        </div>
+        <div class="swipe-actions" id="swipeActions">
+          <button class="swipe-btn swipe-pass" onclick="swipeLeft()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <button class="swipe-btn swipe-like" onclick="swipeRight()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
     <!-- Create meet screen -->
     <div class="create-screen" id="meetScreen">
       <div class="create-head">
