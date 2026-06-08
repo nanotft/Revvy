@@ -266,6 +266,31 @@
             <div class="type-chip" onclick="selectMatchPref('brand','Italian',this,'brandChips')">Italian</div>
           </div>
 
+          <label class="field-label">Drivetrain</label>
+          <div class="type-chips" id="driveChips">
+            <div class="type-chip selected" onclick="selectMatchPref('drive','Any',this,'driveChips')">Any</div>
+            <div class="type-chip" onclick="selectMatchPref('drive','FWD',this,'driveChips')">FWD</div>
+            <div class="type-chip" onclick="selectMatchPref('drive','RWD',this,'driveChips')">RWD</div>
+            <div class="type-chip" onclick="selectMatchPref('drive','AWD',this,'driveChips')">AWD</div>
+            <div class="type-chip" onclick="selectMatchPref('drive','4WD',this,'driveChips')">4WD</div>
+          </div>
+
+          <label class="field-label">Fuel Type</label>
+          <div class="type-chips" id="fuelChips">
+            <div class="type-chip selected" onclick="selectMatchPref('fuel','Any',this,'fuelChips')">Any</div>
+            <div class="type-chip" onclick="selectMatchPref('fuel','Gas',this,'fuelChips')">Gas</div>
+            <div class="type-chip" onclick="selectMatchPref('fuel','Hybrid',this,'fuelChips')">Hybrid</div>
+            <div class="type-chip" onclick="selectMatchPref('fuel','Electric',this,'fuelChips')">Electric</div>
+            <div class="type-chip" onclick="selectMatchPref('fuel','Diesel',this,'fuelChips')">Diesel</div>
+          </div>
+
+          <label class="field-label">Transmission</label>
+          <div class="type-chips" id="transChips">
+            <div class="type-chip selected" onclick="selectMatchPref('trans','Any',this,'transChips')">Any</div>
+            <div class="type-chip" onclick="selectMatchPref('trans','Manual',this,'transChips')">Manual</div>
+            <div class="type-chip" onclick="selectMatchPref('trans','Automatic',this,'transChips')">Automatic</div>
+          </div>
+
           <button class="match-go-btn" onclick="startSwiping()">
             Find My Matches
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>

@@ -942,7 +942,10 @@ function epaToCard(v) {
     type, brand, price,
     power: `${power} HP`, accel: `${accel}s`, economy,
     desc: generateDesc(v.make, v.model, vclass, v.drive || '', v.fuelType1 || '', mpg),
-    tags, bg: getMakeGradient(v.make)
+    tags, bg: getMakeGradient(v.make),
+    rawDrive: (v.drive || '').toLowerCase(),
+    rawFuel:  (v.fuelType1 || v.fuelType || '').toLowerCase(),
+    rawTrans: (v.trany || '').toLowerCase()
   };
 }
 
@@ -951,9 +954,50 @@ function normItems(data) {
   return Array.isArray(data.menuItem) ? data.menuItem : [data.menuItem];
 }
 
-function getCarImg(make, model) {
-  const q = encodeURIComponent(`${make} ${model} car`);
-  return `https://source.unsplash.com/800x500/?${q}`;
+const cardImageCache = {};
+
+async function fetchWikiImg(make, model) {
+  const key = `${make}|${model}`;
+  if (key in cardImageCache) return cardImageCache[key];
+  cardImageCache[key] = null;
+  const tries = [
+    `${make}_${model}`, model, `${make}_${model.split(' ')[0]}`
+  ].map(s => s.replace(/\s+/g, '_'));
+  for (const title of tries) {
+    try {
+      const r = await fetch(
+        `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&pithumbsize=800&format=json&origin=*`
+      );
+      const d = await r.json();
+      const page = Object.values(d?.query?.pages || {})[0];
+      if (page?.thumbnail?.source && !('missing' in page)) {
+        cardImageCache[key] = page.thumbnail.source;
+        return page.thumbnail.source;
+      }
+    } catch(e) {}
+  }
+  return null;
+}
+
+function preloadCardImages(fromIdx) {
+  for (let i = fromIdx; i < Math.min(fromIdx + 5, swipeQueue.length); i++) {
+    const car = swipeQueue[i];
+    const key = `${car.make}|${car.model}`;
+    if (key in cardImageCache) continue;
+    fetchWikiImg(car.make, car.model).then(url => {
+      if (!url) return;
+      if (swipeQueue[swipeIndex] === car) {
+        const imgDiv = document.querySelector('#activeCard .swipe-card-img');
+        if (imgDiv) imgDiv.style.cssText = buildCardBg(url, car.bg);
+      }
+    });
+  }
+}
+
+function buildCardBg(imgUrl, fallbackBg) {
+  return imgUrl
+    ? `background:linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.72) 100%),url('${imgUrl}') center 40%/cover,${fallbackBg}`
+    : `background:${fallbackBg}`;
 }
 
 async function loadCarsFromEPA() {
@@ -1000,6 +1044,17 @@ async function loadCarsFromEPA() {
     if (b === '70-100' && (p < 70000 || p >= 100000)) return false;
     if (b === '100+'   && p < 100000) return false;
     if (matchPrefs.carType !== 'Any' && card.type !== matchPrefs.carType) return false;
+    if (matchPrefs.drive !== 'Any') {
+      const dm = { FWD:'front-wheel', RWD:'rear-wheel', AWD:'all-wheel', '4WD':'4-wheel' };
+      if (!card.rawDrive.includes(dm[matchPrefs.drive] || matchPrefs.drive.toLowerCase())) return false;
+    }
+    if (matchPrefs.fuel !== 'Any') {
+      const fm = { Gas:'gasoline', Hybrid:'hybrid', Electric:'electric', Diesel:'diesel' };
+      if (!card.rawFuel.includes(fm[matchPrefs.fuel] || matchPrefs.fuel.toLowerCase())) return false;
+    }
+    if (matchPrefs.trans !== 'Any') {
+      if (!card.rawTrans.includes(matchPrefs.trans.toLowerCase())) return false;
+    }
     return true;
   });
 }
@@ -1113,7 +1168,7 @@ const newCars = [
     bg:"radial-gradient(ellipse at 50% 30%, #1a1505 0%, #0f0c02 100%)" }
 ];
 
-let matchPrefs = { budget: 'any', carType: 'Any', brand: 'Any' };
+let matchPrefs = { budget: 'any', carType: 'Any', brand: 'Any', drive: 'Any', fuel: 'Any', trans: 'Any' };
 let swipeQueue = [];
 let swipeIndex = 0;
 let isDragging = false;
@@ -1200,12 +1255,13 @@ function renderSwipeDeck() {
   const car = swipeQueue[swipeIndex];
   const next = swipeQueue[swipeIndex + 1];
 
-  const cardImg = getCarImg(car.make, car.model);
-  const cardBg = `background:linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.72) 100%),url('${cardImg}') center 40%/cover,${car.bg}`;
+  const cachedImg = cardImageCache[`${car.make}|${car.model}`];
+  const cardBgStyle = buildCardBg(cachedImg, car.bg);
+  preloadCardImages(swipeIndex);
 
   deck.innerHTML = (next ? `<div class="swipe-card-next" style="background:${next.bg};"></div>` : '') +
     `<div class="swipe-card" id="activeCard">
-      <div class="swipe-card-img" style="${cardBg};">
+      <div class="swipe-card-img" style="${cardBgStyle};">
         <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.65"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2m-6 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0m-8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/></svg>
         <div class="swipe-like-label">LIKE</div>
         <div class="swipe-pass-label">PASS</div>
@@ -1223,7 +1279,7 @@ function renderSwipeDeck() {
           <div class="swipe-stat"><div class="swipe-stat-val">${car.economy}</div><div class="swipe-stat-lbl">Economy</div></div>
         </div>
         <div class="swipe-card-specs">${car.tags.map(t => `<span class="spec">${t}</span>`).join('')}</div>
-        <div class="swipe-card-desc">${car.desc}</div>
+        <div class="swipe-card-desc" onclick="this.classList.toggle('expanded')">${car.desc} <span class="desc-more">more</span></div>
       </div>
     </div>`;
 

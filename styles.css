@@ -875,7 +875,16 @@
   .swipe-card-desc {
     font-size: 11px; color: var(--text2); line-height: 1.45; margin-top: 6px;
     overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    cursor: pointer; transition: all 0.2s;
   }
+  .swipe-card-desc.expanded {
+    display: block; overflow: visible; -webkit-line-clamp: unset;
+  }
+  .desc-more {
+    color: var(--accent); font-size: 9px; text-transform: uppercase;
+    letter-spacing: 0.5px; font-family: var(--mono); margin-left: 3px;
+  }
+  .swipe-card-desc.expanded .desc-more { display: none; }
 
   .swipe-actions {
     display: flex; justify-content: center; align-items: center;
