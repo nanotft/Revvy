@@ -758,6 +758,13 @@ function addGarageCar() {
   renderProfile();
 }
 
+/* ── Auth ── */
+function signIn() {
+  const ls = document.getElementById('loginScreen');
+  ls.classList.add('hiding');
+  setTimeout(() => ls.remove(), 380);
+}
+
 /* ── EPA Car Data ── */
 const EPA_BASE = 'https://www.fueleconomy.gov/ws/rest';
 const EPA_YEAR = 2025;
@@ -942,6 +949,11 @@ function epaToCard(v) {
 function normItems(data) {
   if (!data?.menuItem) return [];
   return Array.isArray(data.menuItem) ? data.menuItem : [data.menuItem];
+}
+
+function getCarImg(make, model) {
+  const q = encodeURIComponent(`${make} ${model} car`);
+  return `https://source.unsplash.com/800x500/?${q}`;
 }
 
 async function loadCarsFromEPA() {
@@ -1188,10 +1200,13 @@ function renderSwipeDeck() {
   const car = swipeQueue[swipeIndex];
   const next = swipeQueue[swipeIndex + 1];
 
+  const cardImg = getCarImg(car.make, car.model);
+  const cardBg = `background:linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.72) 100%),url('${cardImg}') center 40%/cover,${car.bg}`;
+
   deck.innerHTML = (next ? `<div class="swipe-card-next" style="background:${next.bg};"></div>` : '') +
     `<div class="swipe-card" id="activeCard">
-      <div class="swipe-card-img" style="background:${car.bg};">
-        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.65"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2m-6 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0m-8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/></svg>
+      <div class="swipe-card-img" style="${cardBg};">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.65"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2m-6 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0m-8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/></svg>
         <div class="swipe-like-label">LIKE</div>
         <div class="swipe-pass-label">PASS</div>
         <div class="swipe-card-badge">${car.type}</div>
@@ -1305,4 +1320,9 @@ function showToast(msg) {
 renderFeed();
 renderMeets();
 
-setTimeout(() => { const s = document.getElementById('splash'); if (s) s.remove(); }, 2600);
+setTimeout(() => {
+  const s = document.getElementById('splash');
+  if (s) s.remove();
+  const ls = document.getElementById('loginScreen');
+  if (ls) ls.classList.add('visible');
+}, 2600);
