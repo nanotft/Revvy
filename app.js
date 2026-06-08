@@ -251,8 +251,44 @@ function fmtTime(t) {
   return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
+function cruiseMeetCard(m, i) {
+  const fromCity = (m.from || '').split(',')[0].trim().toUpperCase();
+  const toCity   = (m.to   || '').split(',')[0].trim().toUpperCase();
+  const carTags  = (m.allowedCars || []).map(c => `<span class="cruise-car-tag">${c}</span>`).join('');
+  return `<div class="meet cruise-meet ${m.mine ? 'mine' : ''}">
+    <div class="cruise-banner">
+      <div class="cruise-route-display">
+        <div class="cruise-city">${fromCity}</div>
+        <div class="cruise-arrow-wrap">
+          <div class="cruise-arrow-line"></div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </div>
+        <div class="cruise-city">${toCity}</div>
+      </div>
+      <div class="cruise-badges">
+        <div class="meet-type-pill">Cruise</div>
+        <div class="cruise-vibe-pill">${m.vibe || 'Casual'}</div>
+      </div>
+    </div>
+    <div class="meet-info">
+      <div class="meet-name">${m.name}</div>
+      <div class="meet-detail">${clockSVG} ${fmtTime(m.time)} &nbsp;·&nbsp; ${fmtDate(m.date)}</div>
+      <div class="cruise-full-route">${m.from} &rarr; ${m.to}</div>
+      ${carTags ? `<div class="cruise-car-tags">${carTags}</div>` : ''}
+      ${m.desc ? `<div class="meet-detail" style="align-items:flex-start;margin-top:4px;color:var(--text2);">${m.desc}</div>` : ''}
+    </div>
+    <div class="meet-foot">
+      <div class="meet-going">
+        <div class="going-stack"><div class="going-dot">JD</div><div class="going-dot">MK</div><div class="going-dot">+</div></div>
+        <span class="going-count">${m.going} going</span>
+      </div>
+      <button class="rsvp-btn ${m.rsvped ? 'going' : ''}" onclick="toggleRsvp(${i})">${m.rsvped ? "You're in" : "RSVP"}</button>
+    </div>
+  </div>`;
+}
+
 function renderMeets() {
-  document.getElementById('meetsList').innerHTML = meets.map((m, i) => `
+  document.getElementById('meetsList').innerHTML = meets.map((m, i) => m.isCruise ? cruiseMeetCard(m, i) : `
     <div class="meet ${m.mine ? 'mine' : ''}">
       <div class="meet-banner" style="background:${m.bg};">
         <div class="meet-banner-overlay"></div>
@@ -345,6 +381,194 @@ function resetMeetForm() {
   selectedType = 'Cruise';
   document.querySelectorAll('#typeChips .type-chip').forEach((c, idx) => c.classList.toggle('selected', idx === 0));
   document.getElementById('meetShareBtn').disabled = true;
+}
+
+/* ── Cruise ── */
+let cruiseMapObj = null, cruiseFromMarker = null, cruiseToMarker = null, cruiseRouteLayer = null;
+let cruiseFromData = null, cruiseToData = null;
+let cruiseVibe = 'Casual';
+let cruiseAllowedCars = new Set(['All Welcome']);
+
+function openHostChooser() {
+  document.getElementById('hostChooser').classList.add('open');
+}
+function closeHostChooser() {
+  document.getElementById('hostChooser').classList.remove('open');
+}
+
+function openCruise() {
+  document.getElementById('cruiseScreen').classList.add('open');
+  setTimeout(() => {
+    if (!cruiseMapObj) {
+      cruiseMapObj = L.map('cruiseMap', {
+        zoomControl: false, attributionControl: false, scrollWheelZoom: false
+      }).setView([40.85, -74.1], 10);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(cruiseMapObj);
+    }
+    cruiseMapObj.invalidateSize();
+  }, 380);
+}
+
+function closeCruise() {
+  document.getElementById('cruiseScreen').classList.remove('open');
+  setTimeout(resetCruiseForm, 320);
+}
+
+function resetCruiseForm() {
+  cruiseFromData = cruiseToData = null;
+  if (cruiseRouteLayer && cruiseMapObj) { cruiseMapObj.removeLayer(cruiseRouteLayer); cruiseRouteLayer = null; }
+  if (cruiseFromMarker && cruiseMapObj) { cruiseMapObj.removeLayer(cruiseFromMarker); cruiseFromMarker = null; }
+  if (cruiseToMarker && cruiseMapObj)  { cruiseMapObj.removeLayer(cruiseToMarker);   cruiseToMarker   = null; }
+  ['cruiseFrom','cruiseTo','cruiseName','cruiseDate','cruiseTime','cruiseNotes'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  cruiseVibe = 'Casual';
+  cruiseAllowedCars = new Set(['All Welcome']);
+  document.querySelectorAll('#vibeChips .type-chip').forEach((c,i)  => c.classList.toggle('selected', i === 0));
+  document.querySelectorAll('#carsChips .type-chip').forEach((c,i)  => c.classList.toggle('selected', i === 0));
+  document.getElementById('cruiseShareBtn').disabled = true;
+  if (cruiseMapObj) cruiseMapObj.setView([40.85, -74.1], 10);
+}
+
+const fromIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:12px;height:12px;background:#e8ff3d;border-radius:50%;border:2px solid #0a0a0a;box-shadow:0 0 8px rgba(232,255,61,0.9);"></div>',
+  iconSize: [12,12], iconAnchor: [6,6]
+});
+const toIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:12px;height:12px;background:#fff;border-radius:50%;border:2px solid #0a0a0a;box-shadow:0 0 8px rgba(255,255,255,0.7);"></div>',
+  iconSize: [12,12], iconAnchor: [6,6]
+});
+
+async function geocodeLoc(q) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);
+    const d = await r.json();
+    if (!d.length) return null;
+    return {
+      lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon),
+      name: d[0].display_name.split(',').slice(0,2).join(', ').trim()
+    };
+  } catch(e) { return null; }
+}
+
+async function geocodeCruiseFrom() {
+  const q = document.getElementById('cruiseFrom').value.trim();
+  if (!q) return;
+  const r = await geocodeLoc(q);
+  if (!r) { showToast('Location not found'); return; }
+  cruiseFromData = r;
+  document.getElementById('cruiseFrom').value = r.name;
+  if (cruiseFromMarker) cruiseMapObj.removeLayer(cruiseFromMarker);
+  cruiseFromMarker = L.marker([r.lat, r.lng], { icon: fromIcon }).addTo(cruiseMapObj);
+  fitCruiseMap();
+  if (cruiseFromData && cruiseToData) drawCruiseRoute();
+  checkCruiseForm();
+}
+
+async function geocodeCruiseTo() {
+  const q = document.getElementById('cruiseTo').value.trim();
+  if (!q) return;
+  const r = await geocodeLoc(q);
+  if (!r) { showToast('Location not found'); return; }
+  cruiseToData = r;
+  document.getElementById('cruiseTo').value = r.name;
+  if (cruiseToMarker) cruiseMapObj.removeLayer(cruiseToMarker);
+  cruiseToMarker = L.marker([r.lat, r.lng], { icon: toIcon }).addTo(cruiseMapObj);
+  fitCruiseMap();
+  if (cruiseFromData && cruiseToData) drawCruiseRoute();
+  checkCruiseForm();
+}
+
+function fitCruiseMap() {
+  if (!cruiseMapObj) return;
+  if (cruiseFromData && cruiseToData) {
+    cruiseMapObj.fitBounds(
+      [[cruiseFromData.lat, cruiseFromData.lng],[cruiseToData.lat, cruiseToData.lng]],
+      { padding: [32, 32] }
+    );
+  } else if (cruiseFromData) {
+    cruiseMapObj.setView([cruiseFromData.lat, cruiseFromData.lng], 12);
+  } else if (cruiseToData) {
+    cruiseMapObj.setView([cruiseToData.lat, cruiseToData.lng], 12);
+  }
+}
+
+async function drawCruiseRoute() {
+  if (!cruiseMapObj || !cruiseFromData || !cruiseToData) return;
+  if (cruiseRouteLayer) { cruiseMapObj.removeLayer(cruiseRouteLayer); cruiseRouteLayer = null; }
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${cruiseFromData.lng},${cruiseFromData.lat};${cruiseToData.lng},${cruiseToData.lat}?geometries=geojson&overview=full`;
+    const data = await fetch(url).then(r => r.json());
+    if (data.code === 'Ok' && data.routes?.length) {
+      cruiseRouteLayer = L.geoJSON(data.routes[0].geometry, {
+        style: { color: '#e8ff3d', weight: 3, opacity: 0.8, dashArray: '8 5' }
+      }).addTo(cruiseMapObj);
+      cruiseMapObj.fitBounds(cruiseRouteLayer.getBounds(), { padding: [28, 28] });
+    }
+  } catch(e) {}
+}
+
+function selectVibeChip(el) {
+  document.querySelectorAll('#vibeChips .type-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  cruiseVibe = el.textContent.trim();
+}
+
+function toggleCruiseCar(el) {
+  const label = el.textContent.trim();
+  if (label === 'All Welcome') {
+    cruiseAllowedCars = new Set(['All Welcome']);
+    document.querySelectorAll('#carsChips .type-chip').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    return;
+  }
+  document.querySelector('#carsChips .type-chip').classList.remove('selected');
+  cruiseAllowedCars.delete('All Welcome');
+  if (cruiseAllowedCars.has(label)) {
+    cruiseAllowedCars.delete(label); el.classList.remove('selected');
+    if (!cruiseAllowedCars.size) {
+      cruiseAllowedCars.add('All Welcome');
+      document.querySelector('#carsChips .type-chip').classList.add('selected');
+    }
+  } else {
+    cruiseAllowedCars.add(label); el.classList.add('selected');
+  }
+}
+
+function checkCruiseForm() {
+  document.getElementById('cruiseShareBtn').disabled = !(
+    document.getElementById('cruiseName').value.trim() &&
+    document.getElementById('cruiseDate').value &&
+    document.getElementById('cruiseTime').value &&
+    cruiseFromData && cruiseToData
+  );
+}
+
+function publishCruise() {
+  const fromLabel = cruiseFromData?.name || document.getElementById('cruiseFrom').value.trim();
+  const toLabel   = cruiseToData?.name   || document.getElementById('cruiseTo').value.trim();
+  meets.unshift({
+    name:      document.getElementById('cruiseName').value.trim(),
+    type:      'Cruise',
+    date:      document.getElementById('cruiseDate').value,
+    time:      document.getElementById('cruiseTime').value,
+    loc:       fromLabel,
+    desc:      document.getElementById('cruiseNotes').value.trim(),
+    isCruise:  true,
+    from:      fromLabel,
+    to:        toLabel,
+    vibe:      cruiseVibe,
+    allowedCars: [...cruiseAllowedCars],
+    bg:        'radial-gradient(ellipse at 50% 50%, #0f1a0f 0%, #050a05 100%)',
+    going: 1, rsvped: true, mine: true
+  });
+  saveMeets();
+  renderMeets();
+  closeCruise();
+  switchView('meets');
+  showToast("Cruise posted — let's roll!");
 }
 
 /* ── Search ── */
