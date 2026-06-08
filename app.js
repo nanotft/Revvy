@@ -1080,3 +1080,5 @@ function showToast(msg) {
 
 renderFeed();
 renderMeets();
+
+setTimeout(() => { const s = document.getElementById('splash'); if (s) s.remove(); }, 2600);
