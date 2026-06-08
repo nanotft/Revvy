@@ -833,16 +833,28 @@
     height: 52%; display: flex; align-items: center; justify-content: center;
     position: relative; overflow: hidden;
   }
-  .swipe-card-img > svg { width: 160px; height: 160px; pointer-events: none; }
+  .swipe-card-img > svg { width: 160px; height: 160px; pointer-events: none; position: relative; z-index: 2; }
+  .swipe-card-photo {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: center 30%;
+    animation: photoFadeIn 0.35s ease-out;
+  }
+  .swipe-card-img-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0) 30%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none; z-index: 1;
+  }
+  @keyframes photoFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
   .swipe-card-badge {
-    position: absolute; top: 12px; right: 12px;
+    position: absolute; top: 12px; right: 12px; z-index: 3;
     background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
     border: 1px solid rgba(255,255,255,0.14); color: var(--text);
     border-radius: 100px; padding: 4px 10px; font-size: 10px; font-family: var(--mono);
   }
   .swipe-card-origin {
-    position: absolute; top: 12px; left: 12px;
+    position: absolute; top: 12px; left: 12px; z-index: 3;
     background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
     border: 1px solid rgba(255,255,255,0.14); color: var(--text3);
     border-radius: 100px; padding: 4px 10px; font-size: 10px; font-family: var(--mono);
@@ -850,7 +862,7 @@
 
   .swipe-like-label, .swipe-pass-label {
     position: absolute; top: 18px; font-family: var(--display); font-size: 30px;
-    padding: 4px 12px; border-radius: 8px; opacity: 0; pointer-events: none; letter-spacing: 1px;
+    padding: 4px 12px; border-radius: 8px; opacity: 0; pointer-events: none; letter-spacing: 1px; z-index: 3;
   }
   .swipe-like-label { left: 14px; color: #4cff91; border: 3px solid #4cff91; transform: rotate(-12deg); }
   .swipe-pass-label { right: 14px; color: #ff4444; border: 3px solid #ff4444; transform: rotate(12deg); }

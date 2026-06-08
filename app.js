@@ -944,7 +944,7 @@ function epaToCard(v) {
     desc: generateDesc(v.make, v.model, vclass, v.drive || '', v.fuelType1 || '', mpg),
     tags, bg: getMakeGradient(v.make),
     rawDrive: (v.drive || '').toLowerCase(),
-    rawFuel:  (v.fuelType1 || v.fuelType || '').toLowerCase(),
+    rawFuel:  [(v.fuelType1 || v.fuelType || ''), (v.atvType || '')].join(' ').toLowerCase(),
     rawTrans: (v.trany || '').toLowerCase()
   };
 }
@@ -988,16 +988,17 @@ function preloadCardImages(fromIdx) {
       if (!url) return;
       if (swipeQueue[swipeIndex] === car) {
         const imgDiv = document.querySelector('#activeCard .swipe-card-img');
-        if (imgDiv) imgDiv.style.cssText = buildCardBg(url, car.bg);
+        if (imgDiv && !imgDiv.querySelector('.swipe-card-photo')) {
+          const img = document.createElement('img');
+          img.className = 'swipe-card-photo';
+          img.src = url;
+          img.alt = '';
+          img.onerror = () => img.remove();
+          imgDiv.insertBefore(img, imgDiv.firstChild);
+        }
       }
     });
   }
-}
-
-function buildCardBg(imgUrl, fallbackBg) {
-  return imgUrl
-    ? `background:linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.72) 100%),url('${imgUrl}') center 40%/cover,${fallbackBg}`
-    : `background:${fallbackBg}`;
 }
 
 async function loadCarsFromEPA() {
@@ -1009,7 +1010,7 @@ async function loadCarsFromEPA() {
     ? allMakes.filter(m => getMakeOrigin(m) === matchPrefs.brand)
     : allMakes.filter(m => knownMakes.has(m));
   if (!makes.length) return [];
-  makes = makes.slice(0, 10);
+  makes = makes.slice(0, 12);
 
   const modelLists = await Promise.all(
     makes.map(make =>
@@ -1021,19 +1022,19 @@ async function loadCarsFromEPA() {
 
   const pairs = [];
   for (const { make, models } of modelLists) {
-    models.slice(0, 3).forEach(model => pairs.push({ make, model }));
+    models.slice(0, 6).forEach(model => pairs.push({ make, model }));
   }
 
-  const idList = await Promise.all(
+  const idLists = await Promise.all(
     pairs.map(({ make, model }) =>
       get(`vehicle/menu/options?year=${EPA_YEAR}&make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`)
-        .then(d => { const items = normItems(d); return items.length ? items[0].value : null; })
-        .catch(() => null)
+        .then(d => normItems(d).slice(0, 2).map(i => i.value))
+        .catch(() => [])
     )
   );
 
   const vehicles = await Promise.all(
-    idList.filter(Boolean).map(id => get(`vehicle/${id}`).catch(() => null))
+    idLists.flat().filter(Boolean).map(id => get(`vehicle/${id}`).catch(() => null))
   );
 
   return vehicles.filter(Boolean).map(epaToCard).filter(card => {
@@ -1049,8 +1050,11 @@ async function loadCarsFromEPA() {
       if (!card.rawDrive.includes(dm[matchPrefs.drive] || matchPrefs.drive.toLowerCase())) return false;
     }
     if (matchPrefs.fuel !== 'Any') {
-      const fm = { Gas:'gasoline', Hybrid:'hybrid', Electric:'electric', Diesel:'diesel' };
-      if (!card.rawFuel.includes(fm[matchPrefs.fuel] || matchPrefs.fuel.toLowerCase())) return false;
+      const rf = card.rawFuel;
+      if (matchPrefs.fuel === 'Gas'      && (!rf.includes('gasoline') || rf.includes('hybrid') || rf.includes('electric'))) return false;
+      if (matchPrefs.fuel === 'Hybrid'   && !rf.includes('hybrid'))    return false;
+      if (matchPrefs.fuel === 'Electric' && !rf.includes('electric'))  return false;
+      if (matchPrefs.fuel === 'Diesel'   && !rf.includes('diesel'))    return false;
     }
     if (matchPrefs.trans !== 'Any') {
       if (!card.rawTrans.includes(matchPrefs.trans.toLowerCase())) return false;
@@ -1256,12 +1260,13 @@ function renderSwipeDeck() {
   const next = swipeQueue[swipeIndex + 1];
 
   const cachedImg = cardImageCache[`${car.make}|${car.model}`];
-  const cardBgStyle = buildCardBg(cachedImg, car.bg);
   preloadCardImages(swipeIndex);
 
   deck.innerHTML = (next ? `<div class="swipe-card-next" style="background:${next.bg};"></div>` : '') +
     `<div class="swipe-card" id="activeCard">
-      <div class="swipe-card-img" style="${cardBgStyle};">
+      <div class="swipe-card-img" style="background:${car.bg};">
+        ${cachedImg ? `<img class="swipe-card-photo" src="${cachedImg}" alt="" onerror="this.remove()">` : ''}
+        <div class="swipe-card-img-overlay"></div>
         <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.65"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2m-6 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0m-8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/></svg>
         <div class="swipe-like-label">LIKE</div>
         <div class="swipe-pass-label">PASS</div>
