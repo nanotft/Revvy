@@ -77,18 +77,44 @@
       <div class="feed" id="feed"></div>
     </div>
 
-    <!-- Search view -->
+    <!-- Community / Forum view -->
     <div class="view" id="view-search">
-      <div class="search-bar-wrap">
-        <div class="search-input-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-input" id="searchInput" placeholder="Search cars, people, meets…" oninput="handleSearch(this.value)" autocomplete="off" spellcheck="false">
-          <button class="search-clear" id="searchClear" onclick="clearSearch()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+
+      <!-- Thread list -->
+      <div id="forumListPanel" style="display:flex;flex-direction:column;height:100%;">
+        <div class="forum-header">
+          <div class="forum-header-title">COMMUNITY</div>
+          <button class="forum-new-btn" onclick="openNewThread()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+        <div class="forum-cats" id="forumCats">
+          <div class="forum-cat active" onclick="setForumCat('All',this)">All</div>
+          <div class="forum-cat" onclick="setForumCat('Builds',this)">Builds</div>
+          <div class="forum-cat" onclick="setForumCat('Advice',this)">Advice</div>
+          <div class="forum-cat" onclick="setForumCat('Meets',this)">Meets</div>
+          <div class="forum-cat" onclick="setForumCat('Market',this)">Market</div>
+          <div class="forum-cat" onclick="setForumCat('General',this)">General</div>
+        </div>
+        <div class="forum-list" id="forumList"></div>
+      </div>
+
+      <!-- Thread detail -->
+      <div id="forumThreadPanel" style="display:none;flex-direction:column;height:100%;">
+        <div class="forum-thread-head">
+          <button class="create-cancel" onclick="backToForumList()">Back</button>
+          <div class="forum-thread-cat-label" id="threadCatLabel"></div>
+          <div style="width:52px;"></div>
+        </div>
+        <div class="forum-thread-scroll" id="forumThreadScroll"></div>
+        <div class="forum-reply-bar">
+          <input class="forum-reply-input" id="replyInput" placeholder="Add a reply…" autocomplete="off" onkeydown="if(event.key==='Enter')postReply()">
+          <button class="forum-reply-send" onclick="postReply()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
         </div>
       </div>
-      <div class="search-results" id="searchResults"></div>
+
     </div>
 
     <!-- Meets view -->
@@ -101,6 +127,18 @@
         <div class="meets-intro">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
           <span id="meetsIntroText">Meets near Fairfield, NJ</span>
+        </div>
+        <div class="radar-banner" id="radarBanner" style="display:none;" onclick="openRadar()">
+          <div class="radar-banner-icon">
+            <div class="radar-mini-sweep"></div>
+            <div class="radar-mini-blip rmbp-1"></div>
+            <div class="radar-mini-blip rmbp-2"></div>
+          </div>
+          <div class="radar-banner-body">
+            <div class="radar-banner-title">CRUISER RADAR</div>
+            <div class="radar-banner-sub">4 cars active near Fairfield</div>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--text3);flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
         <div class="speed-banner" onclick="openSpeedBoard()">
           <div class="speed-banner-left">
@@ -167,7 +205,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </div>
       <div class="nav-item" id="nav-search" onclick="switchView('search')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </div>
       <div class="nav-item" onclick="openCreate()">
         <div class="nav-fab">
@@ -469,6 +507,67 @@
 
         <label class="field-label">Notes for drivers</label>
         <textarea class="field-textarea" id="cruiseNotes" rows="3" placeholder="Route details, what to expect, meeting instructions…"></textarea>
+      </div>
+    </div>
+
+    <!-- Radar screen -->
+    <div class="create-screen radar-screen" id="radarScreen">
+      <div style="display:flex;flex-direction:column;height:100%;">
+        <div class="create-head radar-head">
+          <button class="create-cancel" style="color:var(--accent);" onclick="closeRadar()">Close</button>
+          <div class="create-title" style="color:var(--accent);">NEARBY</div>
+          <div style="width:60px;"></div>
+        </div>
+        <div class="radar-body">
+          <div class="radar-count-wrap">
+            <div class="radar-count-num">4</div>
+            <div class="radar-count-lbl">cruisers near you</div>
+          </div>
+          <div class="radar-wrap" id="radarWrap">
+            <div class="radar-ring" style="width:33%;height:33%;"></div>
+            <div class="radar-ring" style="width:67%;height:67%;"></div>
+            <div class="radar-ring" style="width:100%;height:100%;"></div>
+            <div class="radar-crossh"></div>
+            <div class="radar-crossv"></div>
+            <div class="radar-sweep"></div>
+            <div class="radar-center"></div>
+          </div>
+          <div class="radar-dist-row"><span>1 mi</span><span>3 mi</span><span>5 mi</span></div>
+        </div>
+        <div class="radar-blip-card" id="radarBlipCard" style="display:none;">
+          <div class="radar-bc-avatar" id="radarBcAvatar"></div>
+          <div class="radar-bc-info">
+            <div class="radar-bc-name" id="radarBcName"></div>
+            <div class="radar-bc-car" id="radarBcCar"></div>
+            <div class="radar-bc-dist" id="radarBcDist"></div>
+          </div>
+          <button class="radar-bc-dm" onclick="closeRadar();openDMs()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- New thread screen -->
+    <div class="create-screen" id="newThreadScreen">
+      <div class="create-head">
+        <button class="create-cancel" onclick="closeNewThread()">Cancel</button>
+        <div class="create-title">NEW THREAD</div>
+        <button class="create-share" id="threadShareBtn" onclick="submitThread()" disabled>Post</button>
+      </div>
+      <div class="create-body">
+        <label class="field-label">Category</label>
+        <div class="type-chips" id="threadCatChips">
+          <div class="type-chip selected" onclick="selectThreadCat('Builds',this)">Builds</div>
+          <div class="type-chip" onclick="selectThreadCat('Advice',this)">Advice</div>
+          <div class="type-chip" onclick="selectThreadCat('Meets',this)">Meets</div>
+          <div class="type-chip" onclick="selectThreadCat('Market',this)">Market</div>
+          <div class="type-chip" onclick="selectThreadCat('General',this)">General</div>
+        </div>
+        <label class="field-label">Title</label>
+        <input class="field-input" id="threadTitleInput" placeholder="What's on your mind?" oninput="checkThreadForm()">
+        <label class="field-label">Details</label>
+        <textarea class="field-textarea" id="threadBodyInput" rows="4" placeholder="Share the details…" oninput="checkThreadForm()"></textarea>
       </div>
     </div>
 

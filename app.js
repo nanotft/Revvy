@@ -170,11 +170,65 @@ function saveRuns() {
   try { localStorage.setItem('revmatch_runs', JSON.stringify(speedRuns)); } catch(e) {}
 }
 
+const _N2 = Date.now();
+const FORUM_SEED = [
+  { id:'f1', cat:'Builds', pinned:true,
+    title:'TE37s on a daily — worth it or nah?',
+    author:{ init:'MK', name:'Mike K.', handle:'@mikek_r34', verified:true },
+    body:'Finally pulled the trigger on bronze TE37s for the M3. Anyone running Volks as a daily? Curious about long-term durability on NJ roads.',
+    ts: _N2-7200000,
+    replies:[
+      { init:'SP', name:'Spencer M.', verified:true, text:'Ran them on my GT3 for 2 years, zero issues. Just get road hazard.', ts:_N2-6000000 },
+      { init:'AL', name:'Alex J.', verified:true, text:'NJ roads will bend them if you hit a pothole right. Budget for a spare.', ts:_N2-3600000 },
+    ]},
+  { id:'f2', cat:'Meets',
+    title:'Anyone hitting NJMP in July? Looking to carpool',
+    author:{ init:'SP', name:'Spencer M.', handle:'@spence_gt3', verified:true },
+    body:'Signed up for the HPDE in July. Would be sick to roll in as a group. Anyone else registered?',
+    ts: _N2-86400000,
+    replies:[
+      { init:'CR', name:'Carlos R.', verified:false, text:"I'm in, just sent my registration. What run group are you in?", ts:_N2-82000000 },
+    ]},
+  { id:'f3', cat:'Advice',
+    title:'Stage 2 tune recs for FA20? Running hot under boost',
+    author:{ init:'CR', name:'Carlos R.', handle:'@cr_sti', verified:false },
+    body:"Just finished Stage 2 on the STI. Running lean above 6k and temps spike above 220°F in 3rd gear. Tune shop says normal but I'm not convinced.",
+    ts: _N2-172800000,
+    replies:[
+      { init:'MK', name:'Mike K.', verified:true, text:"OTS maps on Cobb are notorious for running lean on modded cars. Get an e-tune.", ts:_N2-168000000 },
+      { init:'AL', name:'Alex J.', verified:true, text:'Check injector duty cycle too. Might be maxing out.', ts:_N2-160000000 },
+    ]},
+  { id:'f4', cat:'Market',
+    title:'WTB: E36 M3 tri-state, budget $15–22k',
+    author:{ init:'AL', name:'Alex J.', handle:'@alexj_builds', verified:true },
+    body:'Looking for a solid E36 M3, Alpine White or Cosmos Black. No track cars, want something streetable. DM if you know of anything.',
+    ts: _N2-259200000, replies:[] },
+  { id:'f5', cat:'General',
+    title:'Best canyon roads within 2hrs of NJ?',
+    author:{ init:'SP', name:'Spencer M.', handle:'@spence_gt3', verified:true },
+    body:'Planning a weekend drive. Looking for twisties, nothing too crowded. Skyline Drive? Route 9W? Any hidden gems?',
+    ts: _N2-345600000,
+    replies:[
+      { init:'MK', name:'Mike K.', verified:true, text:'Catskills, 23A from Tannersville to Haines Falls. Absolute banger.', ts:_N2-340000000 },
+      { init:'CR', name:'Carlos R.', verified:false, text:'Storm King highway in the fall hits different', ts:_N2-300000000 },
+    ]},
+];
+function loadForum() {
+  try {
+    const s = localStorage.getItem('revmatch_forum');
+    return s ? JSON.parse(s) : JSON.parse(JSON.stringify(FORUM_SEED));
+  } catch(e) { return JSON.parse(JSON.stringify(FORUM_SEED)); }
+}
+function saveForum() {
+  try { localStorage.setItem('revmatch_forum', JSON.stringify(forumThreads)); } catch(e) {}
+}
+
 let posts = loadPosts();
 let meets = loadMeets();
 let garage = loadGarage();
 let dmThreads = loadDMs();
 let speedRuns = loadRuns();
+let forumThreads = loadForum();
 
 const carSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2m-6 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0m-8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/></svg>`;
 const carMini = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>`;
@@ -370,6 +424,8 @@ function switchMeetsSeg(seg, el) {
   el.classList.add('active');
   const intro = document.getElementById('meetsIntroText');
   if (intro) intro.textContent = seg === 'cruises' ? 'Cruises near Fairfield, NJ' : 'Meets near Fairfield, NJ';
+  const banner = document.getElementById('radarBanner');
+  if (banner) banner.style.display = seg === 'cruises' ? 'flex' : 'none';
   renderMeets();
 }
 
@@ -750,6 +806,187 @@ function renderSearch(q) {
   container.innerHTML = html;
 }
 
+/* ── Forum ── */
+let forumCat = 'All';
+let activeThreadId = null;
+
+function setForumCat(cat, el) {
+  forumCat = cat;
+  document.querySelectorAll('.forum-cat').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderForum();
+}
+
+function fmtForumTime(ts) {
+  const d = Date.now() - ts;
+  if (d < 3600000) return Math.max(1, Math.floor(d/60000)) + 'm ago';
+  if (d < 86400000) return Math.floor(d/3600000) + 'h ago';
+  return Math.floor(d/86400000) + 'd ago';
+}
+
+function renderForum() {
+  const list = document.getElementById('forumList');
+  if (!list) return;
+  const filtered = forumCat === 'All' ? forumThreads : forumThreads.filter(t => t.cat === forumCat);
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state" style="padding:40px 20px;"><p>No threads yet in ${forumCat}.<br>Start the conversation.</p></div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(t => `
+    <div class="forum-thread" onclick="openForumThread('${t.id}')">
+      <div class="forum-thread-meta">
+        <span class="forum-thread-cat">${t.cat}</span>
+        <span class="forum-thread-time">${fmtForumTime(t.ts)}</span>
+      </div>
+      <div class="forum-thread-title">${t.title}</div>
+      <div class="forum-thread-byline">
+        <span class="forum-thread-avatar">${t.author.init}</span>
+        <span class="forum-thread-author">${t.author.name}${t.author.verified ? ' <span class="verified-badge">✓</span>' : ''}</span>
+        <span class="forum-thread-replies">${t.replies.length} ${t.replies.length === 1 ? 'reply' : 'replies'}</span>
+      </div>
+    </div>`).join('');
+}
+
+function openForumThread(id) {
+  activeThreadId = id;
+  const t = forumThreads.find(f => f.id === id);
+  if (!t) return;
+  document.getElementById('forumListPanel').style.display = 'none';
+  const panel = document.getElementById('forumThreadPanel');
+  panel.style.display = 'flex';
+  document.getElementById('threadCatLabel').textContent = t.cat;
+  const scroll = document.getElementById('forumThreadScroll');
+  scroll.innerHTML = `
+    <div class="forum-op">
+      <div class="forum-op-head">
+        <span class="forum-thread-avatar">${t.author.init}</span>
+        <div>
+          <div class="forum-op-name">${t.author.name}${t.author.verified ? ' <span class="verified-badge">✓</span>' : ''}</div>
+          <div class="forum-op-handle">${t.author.handle || ''} · ${fmtForumTime(t.ts)}</div>
+        </div>
+      </div>
+      <div class="forum-op-body">${t.body}</div>
+    </div>
+    <div class="forum-replies-label">${t.replies.length} ${t.replies.length === 1 ? 'Reply' : 'Replies'}</div>
+    ${t.replies.map(r => `
+      <div class="forum-reply">
+        <span class="forum-thread-avatar forum-reply-avatar">${r.init}</span>
+        <div class="forum-reply-body">
+          <div class="forum-reply-name">${r.name}${r.verified ? ' <span class="verified-badge">✓</span>' : ''} <span class="forum-thread-time">${fmtForumTime(r.ts)}</span></div>
+          <div class="forum-reply-text">${r.text}</div>
+        </div>
+      </div>`).join('')}`;
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function backToForumList() {
+  document.getElementById('forumThreadPanel').style.display = 'none';
+  document.getElementById('forumListPanel').style.display = 'flex';
+  activeThreadId = null;
+}
+
+function postReply() {
+  const inp = document.getElementById('replyInput');
+  const text = inp.value.trim();
+  if (!text || !activeThreadId) return;
+  const t = forumThreads.find(f => f.id === activeThreadId);
+  if (!t) return;
+  t.replies.push({ init:'ME', name:'You', verified:false, text, ts: Date.now() });
+  saveForum();
+  inp.value = '';
+  openForumThread(activeThreadId);
+}
+
+let newThreadCat = '';
+function openNewThread() {
+  newThreadCat = '';
+  document.querySelectorAll('#threadCatChips .type-chip').forEach(c => c.classList.remove('selected'));
+  document.getElementById('threadTitleInput').value = '';
+  document.getElementById('threadBodyInput').value = '';
+  checkThreadForm();
+  document.getElementById('newThreadScreen').classList.add('open');
+}
+function closeNewThread() {
+  document.getElementById('newThreadScreen').classList.remove('open');
+}
+function selectThreadCat(cat, el) {
+  newThreadCat = cat;
+  document.querySelectorAll('#threadCatChips .type-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  checkThreadForm();
+}
+function checkThreadForm() {
+  const ok = newThreadCat && document.getElementById('threadTitleInput').value.trim().length > 2;
+  document.getElementById('threadShareBtn').disabled = !ok;
+}
+function submitThread() {
+  const title = document.getElementById('threadTitleInput').value.trim();
+  const body = document.getElementById('threadBodyInput').value.trim();
+  if (!title || !newThreadCat) return;
+  const newThread = {
+    id: 'f' + Date.now(),
+    cat: newThreadCat,
+    title,
+    author: { init:'ME', name:'You', handle:'@you', verified:false },
+    body: body || '',
+    ts: Date.now(),
+    replies: []
+  };
+  forumThreads.unshift(newThread);
+  saveForum();
+  closeNewThread();
+  forumCat = 'All';
+  document.querySelectorAll('.forum-cat').forEach((c, i) => c.classList.toggle('active', i === 0));
+  renderForum();
+  openForumThread(newThread.id);
+}
+
+/* ── Radar ── */
+const RADAR_BLIPS = [
+  { id:'rb1', init:'MK', name:'Mike K.', car:'2002 Nissan Skyline R34', dist:'0.8 mi', angle:47, ring:0.25, online:true },
+  { id:'rb2', init:'AL', name:'Alex J.', car:'2019 BMW M3 Competition', dist:'1.9 mi', angle:142, ring:0.52, online:true },
+  { id:'rb3', init:'SP', name:'Spencer M.', car:'2021 Porsche 911 GT3', dist:'3.1 mi', angle:255, ring:0.72, online:false },
+  { id:'rb4', init:'CR', name:'Carlos R.', car:'2022 Subaru WRX STI', dist:'4.4 mi', angle:330, ring:0.88, online:true },
+];
+
+function openRadar() {
+  const wrap = document.getElementById('radarWrap');
+  const existingBlips = wrap.querySelectorAll('.radar-blip');
+  existingBlips.forEach(b => b.remove());
+  document.getElementById('radarBlipCard').style.display = 'none';
+  RADAR_BLIPS.forEach(blip => {
+    const rad = (blip.angle - 90) * Math.PI / 180;
+    const r = blip.ring;
+    const x = 50 + r * 50 * Math.cos(rad);
+    const y = 50 + r * 50 * Math.sin(rad);
+    const el = document.createElement('div');
+    el.className = 'radar-blip' + (blip.online ? ' radar-blip-online' : '');
+    el.textContent = blip.init;
+    el.style.left = x + '%';
+    el.style.top = y + '%';
+    el.setAttribute('data-id', blip.id);
+    el.onclick = () => selectBlip(blip.id);
+    wrap.appendChild(el);
+  });
+  document.getElementById('radarScreen').classList.add('open');
+}
+function closeRadar() {
+  document.getElementById('radarScreen').classList.remove('open');
+}
+function selectBlip(id) {
+  const blip = RADAR_BLIPS.find(b => b.id === id);
+  if (!blip) return;
+  document.querySelectorAll('.radar-blip').forEach(b => b.classList.remove('radar-blip-selected'));
+  const el = document.querySelector(`.radar-blip[data-id="${id}"]`);
+  if (el) el.classList.add('radar-blip-selected');
+  const card = document.getElementById('radarBlipCard');
+  card.style.display = 'flex';
+  document.getElementById('radarBcAvatar').textContent = blip.init;
+  document.getElementById('radarBcName').textContent = blip.name;
+  document.getElementById('radarBcCar').textContent = blip.car;
+  document.getElementById('radarBcDist').textContent = blip.dist + ' away';
+}
+
 /* ── View switching ── */
 function switchView(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -759,10 +996,7 @@ function switchView(view) {
   document.getElementById('nav-meets').classList.toggle('active', view === 'meets');
   document.getElementById('nav-profile').classList.toggle('active', view === 'profile');
   if (view === 'profile') renderProfile();
-  if (view === 'search') {
-    renderSearch(document.getElementById('searchInput').value.trim().toLowerCase());
-    setTimeout(() => document.getElementById('searchInput').focus(), 50);
-  }
+  if (view === 'search') renderForum();
 }
 
 /* ── Profile ── */
