@@ -94,9 +94,13 @@
     <!-- Meets view -->
     <div class="view" id="view-meets">
       <div class="meets-scroll">
+        <div class="meets-seg">
+          <button class="meets-seg-btn active" onclick="switchMeetsSeg('meets',this)">Meets</button>
+          <button class="meets-seg-btn" onclick="switchMeetsSeg('cruises',this)">Cruises</button>
+        </div>
         <div class="meets-intro">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          Meets &amp; cruises near Fairfield, NJ
+          <span id="meetsIntroText">Meets near Fairfield, NJ</span>
         </div>
         <div class="speed-banner" onclick="openSpeedBoard()">
           <div class="speed-banner-left">
@@ -243,62 +247,95 @@
           <div class="create-title">FIND YOUR CAR</div>
           <div style="width:60px;"></div>
         </div>
-        <div class="create-body">
-          <p class="match-subtitle">Set your preferences and we'll match you with new cars available near you.</p>
 
-          <label class="field-label">Budget</label>
-          <div class="type-chips" id="budgetChips">
-            <div class="type-chip selected" onclick="selectMatchPref('budget','any',this,'budgetChips')">Any</div>
-            <div class="type-chip" onclick="selectMatchPref('budget','u40',this,'budgetChips')">Under $40k</div>
-            <div class="type-chip" onclick="selectMatchPref('budget','40-70',this,'budgetChips')">$40k – $70k</div>
-            <div class="type-chip" onclick="selectMatchPref('budget','70-100',this,'budgetChips')">$70k – $100k</div>
-            <div class="type-chip" onclick="selectMatchPref('budget','100+',this,'budgetChips')">$100k+</div>
+        <div class="pref-scroll">
+
+          <div class="pref-section">
+            <div class="pref-label">BUDGET</div>
+            <div class="type-chips" id="budgetChips">
+              <div class="type-chip selected" onclick="selectMatchPref('budget','any',this,'budgetChips')">Any</div>
+              <div class="type-chip" onclick="selectMatchPref('budget','u40',this,'budgetChips')">Under $40k</div>
+              <div class="type-chip" onclick="selectMatchPref('budget','40-70',this,'budgetChips')">$40–70k</div>
+              <div class="type-chip" onclick="selectMatchPref('budget','70-100',this,'budgetChips')">$70–100k</div>
+              <div class="type-chip" onclick="selectMatchPref('budget','100+',this,'budgetChips')">$100k+</div>
+            </div>
           </div>
 
-          <label class="field-label">Body Type</label>
-          <div class="type-chips" id="typeMatchChips">
-            <div class="type-chip selected" onclick="selectMatchPref('carType','Any',this,'typeMatchChips')">Any</div>
-            <div class="type-chip" onclick="selectMatchPref('carType','Sedan',this,'typeMatchChips')">Sedan</div>
-            <div class="type-chip" onclick="selectMatchPref('carType','Sports',this,'typeMatchChips')">Sports</div>
-            <div class="type-chip" onclick="selectMatchPref('carType','SUV',this,'typeMatchChips')">SUV</div>
-            <div class="type-chip" onclick="selectMatchPref('carType','Truck',this,'typeMatchChips')">Truck</div>
-            <div class="type-chip" onclick="selectMatchPref('carType','EV',this,'typeMatchChips')">EV</div>
+          <div class="pref-section">
+            <div class="pref-label">BODY TYPE</div>
+            <div class="type-chips" id="typeMatchChips">
+              <div class="type-chip selected" onclick="selectMatchPref('carType','Any',this,'typeMatchChips')">Any</div>
+              <div class="type-chip" onclick="selectMatchPref('carType','Sedan',this,'typeMatchChips')">🚗 Sedan</div>
+              <div class="type-chip" onclick="selectMatchPref('carType','Sports',this,'typeMatchChips')">🏎 Sports</div>
+              <div class="type-chip" onclick="selectMatchPref('carType','SUV',this,'typeMatchChips')">🚙 SUV</div>
+              <div class="type-chip" onclick="selectMatchPref('carType','Truck',this,'typeMatchChips')">🛻 Truck</div>
+              <div class="type-chip" onclick="selectMatchPref('carType','EV',this,'typeMatchChips')">⚡ EV</div>
+            </div>
           </div>
 
-          <label class="field-label">Origin</label>
-          <div class="type-chips" id="brandChips">
-            <div class="type-chip selected" onclick="selectMatchPref('brand','Any',this,'brandChips')">Any</div>
-            <div class="type-chip" onclick="selectMatchPref('brand','German',this,'brandChips')">German</div>
-            <div class="type-chip" onclick="selectMatchPref('brand','Japanese',this,'brandChips')">Japanese</div>
-            <div class="type-chip" onclick="selectMatchPref('brand','American',this,'brandChips')">American</div>
-            <div class="type-chip" onclick="selectMatchPref('brand','Italian',this,'brandChips')">Italian</div>
+          <div class="pref-section">
+            <div class="pref-label">ORIGIN</div>
+            <div class="type-chips" id="brandChips">
+              <div class="type-chip selected" onclick="selectMatchPref('brand','Any',this,'brandChips')">Any</div>
+              <div class="type-chip" onclick="selectMatchPref('brand','German',this,'brandChips')">🇩🇪 German</div>
+              <div class="type-chip" onclick="selectMatchPref('brand','Japanese',this,'brandChips')">🇯🇵 Japanese</div>
+              <div class="type-chip" onclick="selectMatchPref('brand','American',this,'brandChips')">🇺🇸 American</div>
+              <div class="type-chip" onclick="selectMatchPref('brand','Italian',this,'brandChips')">🇮🇹 Italian</div>
+            </div>
           </div>
 
-          <label class="field-label">Drivetrain</label>
-          <div class="type-chips" id="driveChips">
-            <div class="type-chip selected" onclick="selectMatchPref('drive','Any',this,'driveChips')">Any</div>
-            <div class="type-chip" onclick="selectMatchPref('drive','FWD',this,'driveChips')">FWD</div>
-            <div class="type-chip" onclick="selectMatchPref('drive','RWD',this,'driveChips')">RWD</div>
-            <div class="type-chip" onclick="selectMatchPref('drive','AWD',this,'driveChips')">AWD</div>
-            <div class="type-chip" onclick="selectMatchPref('drive','4WD',this,'driveChips')">4WD</div>
+          <div class="pref-section">
+            <div class="pref-label">DRIVETRAIN</div>
+            <div class="type-chips" id="driveChips">
+              <div class="type-chip selected" onclick="selectMatchPref('drive','Any',this,'driveChips')">Any</div>
+              <div class="type-chip" onclick="selectMatchPref('drive','FWD',this,'driveChips')">FWD</div>
+              <div class="type-chip" onclick="selectMatchPref('drive','RWD',this,'driveChips')">RWD</div>
+              <div class="type-chip" onclick="selectMatchPref('drive','AWD',this,'driveChips')">AWD</div>
+              <div class="type-chip" onclick="selectMatchPref('drive','4WD',this,'driveChips')">4WD</div>
+            </div>
           </div>
 
-          <label class="field-label">Fuel Type</label>
-          <div class="type-chips" id="fuelChips">
-            <div class="type-chip selected" onclick="selectMatchPref('fuel','Any',this,'fuelChips')">Any</div>
-            <div class="type-chip" onclick="selectMatchPref('fuel','Gas',this,'fuelChips')">Gas</div>
-            <div class="type-chip" onclick="selectMatchPref('fuel','Hybrid',this,'fuelChips')">Hybrid</div>
-            <div class="type-chip" onclick="selectMatchPref('fuel','Electric',this,'fuelChips')">Electric</div>
-            <div class="type-chip" onclick="selectMatchPref('fuel','Diesel',this,'fuelChips')">Diesel</div>
+          <div class="pref-section">
+            <div class="pref-label">FUEL TYPE</div>
+            <div class="type-chips" id="fuelChips">
+              <div class="type-chip selected" onclick="selectMatchPref('fuel','Any',this,'fuelChips')">Any</div>
+              <div class="type-chip" onclick="selectMatchPref('fuel','Gas',this,'fuelChips')">⛽ Gas</div>
+              <div class="type-chip" onclick="selectMatchPref('fuel','Hybrid',this,'fuelChips')">🔋 Hybrid</div>
+              <div class="type-chip" onclick="selectMatchPref('fuel','Electric',this,'fuelChips')">⚡ Electric</div>
+              <div class="type-chip" onclick="selectMatchPref('fuel','Diesel',this,'fuelChips')">🛢 Diesel</div>
+            </div>
           </div>
 
-          <label class="field-label">Transmission</label>
-          <div class="type-chips" id="transChips">
-            <div class="type-chip selected" onclick="selectMatchPref('trans','Any',this,'transChips')">Any</div>
-            <div class="type-chip" onclick="selectMatchPref('trans','Manual',this,'transChips')">Manual</div>
-            <div class="type-chip" onclick="selectMatchPref('trans','Automatic',this,'transChips')">Automatic</div>
+          <div class="pref-section">
+            <div class="pref-label">TRANSMISSION</div>
+            <div class="type-chips" id="transChips">
+              <div class="type-chip selected" onclick="selectMatchPref('trans','Any',this,'transChips')">Any</div>
+              <div class="type-chip" onclick="selectMatchPref('trans','Manual',this,'transChips')">🎛 Manual</div>
+              <div class="type-chip" onclick="selectMatchPref('trans','Automatic',this,'transChips')">🤖 Auto</div>
+            </div>
           </div>
 
+          <div class="pref-section" style="border-bottom:none;">
+            <div class="pref-label">MUST HAVES <span class="pref-label-multi">· pick any</span></div>
+            <div class="type-chips" id="mustHaveChips">
+              <div class="type-chip" onclick="toggleMustHave('Turbo',this)">Turbo</div>
+              <div class="type-chip" onclick="toggleMustHave('V8',this)">V8</div>
+              <div class="type-chip" onclick="toggleMustHave('Track Pkg',this)">Track Pkg</div>
+              <div class="type-chip" onclick="toggleMustHave('Sport Mode',this)">Sport Mode</div>
+              <div class="type-chip" onclick="toggleMustHave('Sunroof',this)">Sunroof</div>
+              <div class="type-chip" onclick="toggleMustHave('Carbon',this)">Carbon</div>
+              <div class="type-chip" onclick="toggleMustHave('Modded',this)">Modded</div>
+              <div class="type-chip" onclick="toggleMustHave('Low Miles',this)">Low Miles</div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="pref-bottom">
+          <div class="pref-count-row">
+            <div class="pref-count-dot"></div>
+            <span id="matchCountNum">500+</span>&nbsp;cars match your vibe
+          </div>
           <button class="match-go-btn" onclick="startSwiping()">
             Find My Matches
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>

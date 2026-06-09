@@ -362,8 +362,30 @@ function cruiseMeetCard(m, i) {
   </div>`;
 }
 
+let meetsSeg = 'meets';
+
+function switchMeetsSeg(seg, el) {
+  meetsSeg = seg;
+  document.querySelectorAll('.meets-seg-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const intro = document.getElementById('meetsIntroText');
+  if (intro) intro.textContent = seg === 'cruises' ? 'Cruises near Fairfield, NJ' : 'Meets near Fairfield, NJ';
+  renderMeets();
+}
+
 function renderMeets() {
-  document.getElementById('meetsList').innerHTML = meets.map((m, i) => m.isCruise ? cruiseMeetCard(m, i) : `
+  const indexed = meets.map((m, i) => ({ m, i }));
+  const visible = indexed.filter(({ m }) => meetsSeg === 'cruises' ? m.isCruise : !m.isCruise);
+
+  if (!visible.length) {
+    document.getElementById('meetsList').innerHTML = `<div class="empty-state" style="padding:40px 20px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:44px;height:44px;color:var(--accent);opacity:0.3;margin-bottom:12px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <p>No ${meetsSeg} yet.<br>Be the first to host one.</p>
+    </div>`;
+    return;
+  }
+
+  document.getElementById('meetsList').innerHTML = visible.map(({ m, i }) => m.isCruise ? cruiseMeetCard(m, i) : `
     <div class="meet ${m.mine ? 'mine' : ''}">
       <div class="meet-banner" style="background:${m.bg};">
         <div class="meet-banner-overlay"></div>
@@ -1482,7 +1504,7 @@ const newCars = [
     bg:"radial-gradient(ellipse at 50% 30%, #1a1505 0%, #0f0c02 100%)" }
 ];
 
-let matchPrefs = { budget: 'any', carType: 'Any', brand: 'Any', drive: 'Any', fuel: 'Any', trans: 'Any' };
+let matchPrefs = { budget: 'any', carType: 'Any', brand: 'Any', drive: 'Any', fuel: 'Any', trans: 'Any', mustHave: [] };
 let swipeQueue = [];
 let swipeIndex = 0;
 let isDragging = false;
@@ -1513,6 +1535,28 @@ function selectMatchPref(key, val, el, chipsId) {
   document.querySelectorAll('#' + chipsId + ' .type-chip').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   matchPrefs[key] = val;
+  updateMatchCount();
+}
+
+function toggleMustHave(tag, el) {
+  el.classList.toggle('selected');
+  const idx = matchPrefs.mustHave.indexOf(tag);
+  if (idx === -1) matchPrefs.mustHave.push(tag);
+  else matchPrefs.mustHave.splice(idx, 1);
+  updateMatchCount();
+}
+
+function updateMatchCount() {
+  let n = 520;
+  if (matchPrefs.budget !== 'any')  n = Math.round(n * 0.38);
+  if (matchPrefs.carType !== 'Any') n = Math.round(n * 0.44);
+  if (matchPrefs.brand   !== 'Any') n = Math.round(n * 0.52);
+  if (matchPrefs.drive   !== 'Any') n = Math.round(n * 0.60);
+  if (matchPrefs.fuel    !== 'Any') n = Math.round(n * 0.50);
+  if (matchPrefs.trans   !== 'Any') n = Math.round(n * 0.68);
+  n = Math.max(4, n - matchPrefs.mustHave.length * 14);
+  const el = document.getElementById('matchCountNum');
+  if (el) el.textContent = n >= 100 ? Math.round(n / 10) * 10 + '+' : n;
 }
 
 function filterCars() {
