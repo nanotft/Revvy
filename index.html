@@ -513,6 +513,19 @@
           <div class="type-chip" onclick="toggleCruiseCar(this)">Modified</div>
         </div>
 
+        <label class="field-label">Safety</label>
+        <div class="cruise-toggle-row">
+          <div class="cruise-toggle-icon">🚔</div>
+          <div class="cruise-toggle-body">
+            <div class="cruise-toggle-label">Cop Radar Required</div>
+            <div class="cruise-toggle-sub">Joiners must confirm cop radar is active</div>
+          </div>
+          <label class="toggle-sw">
+            <input type="checkbox" id="copRadarToggle">
+            <span class="toggle-sw-track"><span class="toggle-sw-thumb"></span></span>
+          </label>
+        </div>
+
         <label class="field-label">Notes for drivers</label>
         <textarea class="field-textarea" id="cruiseNotes" rows="3" placeholder="Route details, what to expect, meeting instructions…"></textarea>
       </div>
@@ -554,6 +567,17 @@
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- RSVP Cop Radar gate sheet -->
+    <div class="cop-sheet-overlay" id="rsvpGateOverlay" onclick="closeRsvpGate()" style="display:none;"></div>
+    <div class="cop-sheet" id="rsvpGateSheet">
+      <div class="cop-sheet-handle"></div>
+      <div style="font-size:32px;text-align:center;margin-bottom:10px;">🚔</div>
+      <div class="cop-sheet-title" style="text-align:center;">Cop Radar Required</div>
+      <div class="rsvp-gate-body">This organizer requires cop radar to be active on this cruise. Check it before you roll.</div>
+      <button class="cop-submit-btn" style="background:var(--accent);color:#000;margin-bottom:10px;" onclick="openCopFromGate()">Check Cop Radar</button>
+      <button class="cop-submit-btn" style="background:var(--surface2);color:var(--text);" onclick="confirmRsvpGate()">I'm Ready — Join</button>
     </div>
 
     <!-- Cop Radar screen -->

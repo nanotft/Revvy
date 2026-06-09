@@ -46,6 +46,11 @@ const seedMeets = [
     loc: "Meet at Wawa, Riverdale NJ → run north",
     desc: "Chill cruise up 23 to the lookout. No street racing, keep it clean. All cars welcome.",
     bg: "radial-gradient(ellipse at 60% 40%, #1a1a2e 0%, #08081a 100%)",
+    isCruise: true, from: "Riverdale, NJ", to: "Highland Lakes, NJ",
+    fromCoords: { lat: 41.0143, lng: -74.3021 },
+    toCoords: { lat: 41.1584, lng: -74.4523 },
+    vibe: "Spirited", allowedCars: ["All Welcome"],
+    copRadarRequired: true,
     going: 28, rsvped: false, mine: false
   },
   {
@@ -384,23 +389,31 @@ function cruiseMeetCard(m, i) {
   const fromCity = (m.from || '').split(',')[0].trim().toUpperCase();
   const toCity   = (m.to   || '').split(',')[0].trim().toUpperCase();
   const carTags  = (m.allowedCars || []).map(c => `<span class="cruise-car-tag">${c}</span>`).join('');
+  const hasMap   = !!(m.fromCoords && m.toCoords);
   return `<div class="meet cruise-meet ${m.mine ? 'mine' : ''}">
-    <div class="cruise-banner">
-      <div class="cruise-route-display">
-        <div class="cruise-city">${fromCity}</div>
-        <div class="cruise-arrow-wrap">
-          <div class="cruise-arrow-line"></div>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-        <div class="cruise-city">${toCity}</div>
-      </div>
-      <div class="cruise-badges">
-        <div class="meet-type-pill">Cruise</div>
-        <div class="cruise-vibe-pill">${m.vibe || 'Casual'}</div>
-      </div>
-    </div>
+    ${hasMap
+      ? `<div class="cruise-card-map" id="cmap-${i}" data-idx="${i}"></div>`
+      : `<div class="cruise-banner">
+          <div class="cruise-route-display">
+            <div class="cruise-city">${fromCity}</div>
+            <div class="cruise-arrow-wrap">
+              <div class="cruise-arrow-line"></div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+            <div class="cruise-city">${toCity}</div>
+          </div>
+          <div class="cruise-badges">
+            <div class="meet-type-pill">Cruise</div>
+            <div class="cruise-vibe-pill">${m.vibe || 'Casual'}</div>
+          </div>
+        </div>`
+    }
     <div class="meet-info">
-      <div class="meet-name">${m.name}</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div class="meet-name" style="flex:1;">${m.name}</div>
+        ${m.copRadarRequired ? `<span class="cruise-radar-req-badge">🚔 RADAR</span>` : ''}
+      </div>
+      ${hasMap ? `<div class="cruise-route-inline"><span class="cruise-city-sm">${fromCity}</span><span class="cruise-arrow-sm">→</span><span class="cruise-city-sm">${toCity}</span><span class="cruise-vibe-pill" style="margin-left:auto;">${m.vibe||'Casual'}</span></div>` : ''}
       <div class="meet-detail">${clockSVG} ${fmtTime(m.time)} &nbsp;·&nbsp; ${fmtDate(m.date)}</div>
       <div class="cruise-full-route">${m.from} &rarr; ${m.to}</div>
       ${carTags ? `<div class="cruise-car-tags">${carTags}</div>` : ''}
@@ -411,7 +424,7 @@ function cruiseMeetCard(m, i) {
         <div class="going-stack"><div class="going-dot">JD</div><div class="going-dot">MK</div><div class="going-dot">+</div></div>
         <span class="going-count">${m.going} going</span>
       </div>
-      <button class="rsvp-btn ${m.rsvped ? 'going' : ''}" onclick="toggleRsvp(${i})">${m.rsvped ? "You're in" : "RSVP"}</button>
+      <button class="rsvp-btn ${m.rsvped ? 'going' : ''}" onclick="rsvpCruise(${i})">${m.rsvped ? "You're in" : "RSVP"}</button>
     </div>
   </div>`;
 }
@@ -443,6 +456,7 @@ function renderMeets() {
     return;
   }
 
+  cruiseCardMapInstances.clear();
   document.getElementById('meetsList').innerHTML = visible.map(({ m, i }) => m.isCruise ? cruiseMeetCard(m, i) : `
     <div class="meet ${m.mine ? 'mine' : ''}">
       <div class="meet-banner" style="background:${m.bg};">
@@ -471,6 +485,69 @@ function renderMeets() {
       </div>
     </div>
   `).join('');
+  if (meetsSeg === 'cruises') setTimeout(initCruiseCardMaps, 60);
+}
+
+/* ── Cruise card maps ── */
+const cruiseCardMapInstances = new Map();
+
+function initCruiseCardMaps() {
+  document.querySelectorAll('.cruise-card-map[data-idx]').forEach(div => {
+    const key = div.id;
+    if (cruiseCardMapInstances.has(key)) return;
+    const idx = parseInt(div.dataset.idx);
+    const m = meets[idx];
+    if (!m?.fromCoords || !m?.toCoords) return;
+    const map = L.map(div, {
+      zoomControl: false, attributionControl: false,
+      scrollWheelZoom: false, dragging: true, touchZoom: true
+    }).fitBounds(
+      [[m.fromCoords.lat, m.fromCoords.lng],[m.toCoords.lat, m.toCoords.lng]],
+      { padding: [24, 24] }
+    );
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+    L.marker([m.fromCoords.lat, m.fromCoords.lng], { icon: fromIcon }).addTo(map);
+    L.marker([m.toCoords.lat,   m.toCoords.lng  ], { icon: toIcon   }).addTo(map);
+    fetch(`https://router.project-osrm.org/route/v1/driving/${m.fromCoords.lng},${m.fromCoords.lat};${m.toCoords.lng},${m.toCoords.lat}?geometries=geojson&overview=full`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.code === 'Ok' && data.routes?.length) {
+          L.geoJSON(data.routes[0].geometry, {
+            style: { color: '#e8ff3d', weight: 3, opacity: 0.85, dashArray: '8 5' }
+          }).addTo(map);
+        }
+      }).catch(() => {});
+    cruiseCardMapInstances.set(key, map);
+  });
+}
+
+/* ── RSVP + cop radar gate ── */
+let pendingRsvpIdx = null;
+
+function rsvpCruise(i) {
+  const m = meets[i];
+  if (m.copRadarRequired && !m.rsvped) {
+    pendingRsvpIdx = i;
+    document.getElementById('rsvpGateOverlay').style.display = 'block';
+    document.getElementById('rsvpGateSheet').classList.add('open');
+  } else {
+    toggleRsvp(i);
+  }
+}
+function closeRsvpGate() {
+  document.getElementById('rsvpGateOverlay').style.display = 'none';
+  document.getElementById('rsvpGateSheet').classList.remove('open');
+  pendingRsvpIdx = null;
+}
+function openCopFromGate() {
+  document.getElementById('rsvpGateSheet').classList.remove('open');
+  document.getElementById('rsvpGateOverlay').style.display = 'none';
+  openCopRadar();
+}
+function confirmRsvpGate() {
+  const i = pendingRsvpIdx;
+  closeRsvpGate();
+  if (i !== null) toggleRsvp(i);
 }
 
 function toggleRsvp(i) {
@@ -581,6 +658,7 @@ function resetCruiseForm() {
   cruiseAllowedCars = new Set(['All Welcome']);
   document.querySelectorAll('#vibeChips .type-chip').forEach((c,i)  => c.classList.toggle('selected', i === 0));
   document.querySelectorAll('#carsChips .type-chip').forEach((c,i)  => c.classList.toggle('selected', i === 0));
+  const tog = document.getElementById('copRadarToggle'); if (tog) tog.checked = false;
   document.getElementById('cruiseShareBtn').disabled = true;
   if (cruiseMapObj) cruiseMapObj.setView([40.85, -74.1], 10);
 }
@@ -714,8 +792,11 @@ function publishCruise() {
     isCruise:  true,
     from:      fromLabel,
     to:        toLabel,
+    fromCoords: cruiseFromData ? { lat: cruiseFromData.lat, lng: cruiseFromData.lng } : null,
+    toCoords:   cruiseToData   ? { lat: cruiseToData.lat,   lng: cruiseToData.lng   } : null,
     vibe:      cruiseVibe,
     allowedCars: [...cruiseAllowedCars],
+    copRadarRequired: document.getElementById('copRadarToggle').checked,
     bg:        'radial-gradient(ellipse at 50% 50%, #0f1a0f 0%, #050a05 100%)',
     going: 1, rsvped: true, mine: true
   });

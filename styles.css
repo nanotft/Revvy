@@ -1813,3 +1813,65 @@
   transition: opacity .2s;
 }
 .cop-submit-btn:disabled { opacity: 0.35; cursor: default; }
+
+/* ── Toggle switch ── */
+.toggle-sw { position: relative; display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0; }
+.toggle-sw input { position: absolute; opacity: 0; width: 0; height: 0; }
+.toggle-sw-track {
+  width: 44px; height: 26px; border-radius: 13px;
+  background: var(--surface2); border: 1px solid var(--border);
+  position: relative; transition: background .22s, border-color .22s;
+}
+.toggle-sw input:checked + .toggle-sw-track {
+  background: #e05252; border-color: #e05252;
+}
+.toggle-sw-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; transition: transform .22s;
+}
+.toggle-sw input:checked + .toggle-sw-track .toggle-sw-thumb {
+  transform: translateX(18px);
+}
+
+/* ── Cop radar toggle row in cruise form ── */
+.cruise-toggle-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px; margin-bottom: 16px;
+}
+.cruise-toggle-icon { font-size: 22px; flex-shrink: 0; }
+.cruise-toggle-body { flex: 1; }
+.cruise-toggle-label { font-size: 14px; font-weight: 600; color: var(--text); }
+.cruise-toggle-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+/* ── Cruise card map ── */
+.cruise-card-map {
+  width: 100%; height: 180px; border-radius: 14px 14px 0 0;
+  overflow: hidden; position: relative; background: #0a0f0a;
+}
+
+/* ── Cruise route inline (below map) ── */
+.cruise-route-inline {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+}
+.cruise-city-sm {
+  font-family: var(--display); font-size: 14px; letter-spacing: .5px; color: var(--text);
+}
+.cruise-arrow-sm {
+  font-size: 13px; color: var(--accent);
+}
+
+/* ── Cop radar required badge on cruise card ── */
+.cruise-radar-req-badge {
+  font-size: 10px; font-weight: 800; letter-spacing: .4px;
+  background: rgba(224,82,82,.15); color: #e05252;
+  border: 1px solid rgba(224,82,82,.3); border-radius: 6px;
+  padding: 3px 7px; white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+}
+
+/* ── RSVP gate sheet ── */
+.rsvp-gate-body {
+  font-size: 14px; color: var(--text2); text-align: center;
+  line-height: 1.5; margin-bottom: 20px; padding: 0 8px;
+}
