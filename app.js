@@ -97,9 +97,59 @@ function saveGarage() {
   try { localStorage.setItem('revmatch_garage', JSON.stringify(garage)); } catch (e) {}
 }
 
+const _NOW = Date.now();
+const DM_SEED = [
+  {
+    id: 'mk', init: 'MK', name: 'Mike K.', handle: '@mikek_r34', verified: true,
+    bg: 'radial-gradient(ellipse at 30% 40%, #1a2e1a 0%, #0a140a 100%)',
+    msgs: [
+      { from: 'them', text: 'Bro that M3 build is clean as hell 🔥', ts: _NOW - 7200000 },
+      { from: 'me',   text: 'Appreciate it! Just got the coilovers sorted', ts: _NOW - 7100000 },
+      { from: 'them', text: 'You going to Willowbrook Sunday?', ts: _NOW - 1800000 },
+    ],
+    unread: 1
+  },
+  {
+    id: 'sp', init: 'SP', name: 'Spencer M.', handle: '@spence_gt3', verified: true,
+    bg: 'radial-gradient(ellipse at 60% 50%, #2e1a2e 0%, #14081a 100%)',
+    msgs: [
+      { from: 'them', text: 'Track day NJMP this weekend. You in?', ts: _NOW - 86400000 },
+      { from: 'me',   text: "Can't this weekend, car's at the dyno", ts: _NOW - 85000000 },
+      { from: 'them', text: 'Damn. Next time 👊', ts: _NOW - 84000000 },
+    ],
+    unread: 0
+  },
+  {
+    id: 'cr', init: 'CR', name: 'Carlos R.', handle: '@cr_sti', verified: false,
+    bg: 'radial-gradient(ellipse at 40% 60%, #1a1a2e 0%, #08081a 100%)',
+    msgs: [
+      { from: 'them', text: 'Stage 2 done, 372whp on the dyno 🔥', ts: _NOW - 172800000 },
+    ],
+    unread: 0
+  },
+  {
+    id: 'al', init: 'AL', name: 'Alex J.', handle: '@alexj_builds', verified: true,
+    bg: 'radial-gradient(ellipse at 50% 40%, #2e2410 0%, #1a1305 100%)',
+    msgs: [
+      { from: 'them', text: 'KW V3s are the move fr, what springs did you run?', ts: _NOW - 259200000 },
+    ],
+    unread: 0
+  }
+];
+function loadDMs() {
+  try {
+    const saved = localStorage.getItem('revmatch_dms');
+    return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DM_SEED));
+  } catch(e) { return JSON.parse(JSON.stringify(DM_SEED)); }
+}
+function saveDMs() {
+  try { localStorage.setItem('revmatch_dms', JSON.stringify(dmThreads)); } catch(e) {}
+}
+
 let posts = loadPosts();
 let meets = loadMeets();
 let garage = loadGarage();
+let dmThreads = loadDMs();
 
 const carSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2m-6 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0m-8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/></svg>`;
 const carMini = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>`;
@@ -764,6 +814,118 @@ function addGarageCar() {
   renderProfile();
 }
 
+/* ── DMs ── */
+let activeDMId = null;
+const DM_REPLIES = [
+  'Haha yeah 🔥', 'Facts 💯', 'When are you free?', 'That thing rips bro',
+  'Lmk 👊', 'Bet, let\'s link up', 'Sheesh 😮', 'Pull up to the meet',
+  'No cap', 'Bro same 😂', 'What tune are you running?', 'That setup is clean'
+];
+
+function formatDMTime(ts) {
+  const d = Date.now() - ts;
+  if (d < 3600000) return Math.max(1, Math.floor(d / 60000)) + 'm';
+  if (d < 86400000) return Math.floor(d / 3600000) + 'h';
+  return Math.floor(d / 86400000) + 'd';
+}
+
+function updateDMBadge() {
+  const total = dmThreads.reduce((n, t) => n + (t.unread || 0), 0);
+  const badge = document.getElementById('dmBadge');
+  if (badge) badge.style.display = total > 0 ? '' : 'none';
+}
+
+function renderDMList() {
+  updateDMBadge();
+  document.getElementById('dmList').innerHTML = dmThreads.map(t => {
+    const last = t.msgs[t.msgs.length - 1];
+    const preview = last ? (last.from === 'me' ? 'You: ' + last.text : last.text) : '';
+    const time = last ? formatDMTime(last.ts) : '';
+    return `<div class="dm-thread" onclick="openDMThread('${t.id}')">
+      <div class="dm-thread-avatar" style="background:${t.bg}">${t.init}</div>
+      <div class="dm-thread-body">
+        <div class="dm-thread-top">
+          <div class="dm-thread-name">${escapeHtml(t.name)}${t.verified ? verifySVG : ''}</div>
+          <div class="dm-thread-time">${time}</div>
+        </div>
+        <div class="dm-thread-preview${t.unread ? ' dm-preview-unread' : ''}">${escapeHtml(preview)}</div>
+      </div>
+      ${t.unread ? '<div class="dm-unread-dot"></div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderDMChat(thread) {
+  document.getElementById('dmChatTitle').innerHTML = escapeHtml(thread.name) + (thread.verified ? verifySVG : '');
+  const msgsEl = document.getElementById('dmMessages');
+  msgsEl.innerHTML = thread.msgs.map(m =>
+    `<div class="dm-bubble ${m.from === 'me' ? 'dm-me' : 'dm-them'}">
+      <div class="dm-bubble-text">${escapeHtml(m.text)}</div>
+    </div>`
+  ).join('');
+  requestAnimationFrame(() => { msgsEl.scrollTop = msgsEl.scrollHeight; });
+}
+
+function openDMs() {
+  document.getElementById('dmListPanel').style.display = 'flex';
+  document.getElementById('dmChatPanel').style.display = 'none';
+  renderDMList();
+  document.getElementById('dmScreen').classList.add('open');
+}
+
+function closeDMs() {
+  document.getElementById('dmScreen').classList.remove('open');
+}
+
+function openDMThread(id) {
+  activeDMId = id;
+  const thread = dmThreads.find(t => t.id === id);
+  if (!thread) return;
+  thread.unread = 0;
+  saveDMs();
+  document.getElementById('dmListPanel').style.display = 'none';
+  document.getElementById('dmChatPanel').style.display = 'flex';
+  renderDMChat(thread);
+  updateDMBadge();
+}
+
+function backToDMList() {
+  document.getElementById('dmChatPanel').style.display = 'none';
+  document.getElementById('dmListPanel').style.display = 'flex';
+  renderDMList();
+}
+
+function sendDM() {
+  const input = document.getElementById('dmInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  const thread = dmThreads.find(t => t.id === activeDMId);
+  if (!thread) return;
+  thread.msgs.push({ from: 'me', text, ts: Date.now() });
+  saveDMs();
+  renderDMChat(thread);
+  setTimeout(() => {
+    const typing = document.getElementById('dmTyping');
+    if (typing) { typing.style.display = 'flex'; }
+    const msgsEl = document.getElementById('dmMessages');
+    if (msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight;
+  }, 800);
+  setTimeout(() => {
+    const typing = document.getElementById('dmTyping');
+    if (typing) typing.style.display = 'none';
+    if (dmThreads.find(t => t.id === activeDMId) !== thread) return;
+    thread.msgs.push({
+      from: 'them',
+      text: DM_REPLIES[Math.floor(Math.random() * DM_REPLIES.length)],
+      ts: Date.now()
+    });
+    saveDMs();
+    renderDMChat(thread);
+    renderDMList();
+  }, 2400);
+}
+
 /* ── Garage Verification ── */
 let verifyIdx = null;
 
@@ -1418,6 +1580,7 @@ function showToast(msg) {
 
 renderFeed();
 renderMeets();
+updateDMBadge();
 
 setTimeout(() => {
   const s = document.getElementById('splash');

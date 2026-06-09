@@ -41,9 +41,6 @@
 
     <!-- Splash screen -->
     <div id="splash">
-      <svg class="splash-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.35">
-        <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2m-6 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0m-8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/>
-      </svg>
       <div class="splash-content">
         <div class="splash-logo">REV<span>MATCH</span></div>
         <div class="splash-tag">THE CAR COMMUNITY</div>
@@ -68,7 +65,10 @@
       <div class="logo">REV<span>MATCH</span></div>
       <div class="header-icons">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <div class="dm-icon-wrap" onclick="openDMs()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <div class="dm-header-badge" id="dmBadge" style="display:none"></div>
+        </div>
       </div>
     </div>
 
@@ -421,6 +421,39 @@
 
         <label class="field-label">Notes for drivers</label>
         <textarea class="field-textarea" id="cruiseNotes" rows="3" placeholder="Route details, what to expect, meeting instructions…"></textarea>
+      </div>
+    </div>
+
+    <!-- DMs screen -->
+    <div class="create-screen" id="dmScreen">
+      <!-- Thread list -->
+      <div id="dmListPanel" style="display:flex;flex-direction:column;height:100%;">
+        <div class="create-head">
+          <button class="create-cancel" onclick="closeDMs()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="create-title">MESSAGES</div>
+          <div style="width:60px;"></div>
+        </div>
+        <div class="dm-list" id="dmList"></div>
+      </div>
+      <!-- Chat view -->
+      <div id="dmChatPanel" style="display:none;flex-direction:column;height:100%;">
+        <div class="create-head">
+          <button class="create-cancel" onclick="backToDMList()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="dm-chat-head-name" id="dmChatTitle"></div>
+          <div style="width:60px;"></div>
+        </div>
+        <div class="dm-messages" id="dmMessages"></div>
+        <div class="dm-typing" id="dmTyping" style="display:none"><span></span><span></span><span></span></div>
+        <div class="dm-input-bar">
+          <input class="dm-input" id="dmInput" placeholder="Message…" autocomplete="off" onkeydown="if(event.key==='Enter')sendDM()">
+          <button class="dm-send-btn" onclick="sendDM()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
       </div>
     </div>
 
