@@ -18,9 +18,6 @@
 
     <!-- Login screen -->
     <div id="loginScreen">
-      <svg class="login-car-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.3">
-        <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2m-6 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0m-8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/>
-      </svg>
       <div class="login-top">
         <div class="login-logo">REV<span>MATCH</span></div>
         <div class="login-tagline">Join the community</div>
@@ -424,6 +421,52 @@
 
         <label class="field-label">Notes for drivers</label>
         <textarea class="field-textarea" id="cruiseNotes" rows="3" placeholder="Route details, what to expect, meeting instructions…"></textarea>
+      </div>
+    </div>
+
+    <!-- Verify car sheet -->
+    <div class="verify-overlay" id="verifySheet" onclick="closeVerifySheet()">
+      <div class="verify-panel" onclick="event.stopPropagation()">
+        <div class="verify-handle"></div>
+        <div class="verify-title">VERIFY OWNERSHIP</div>
+        <div class="verify-car-label" id="verifyCarName"></div>
+
+        <div id="verifyOptions">
+          <button class="verify-opt" onclick="doVerify('photo')">
+            <div class="verify-opt-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
+            <div class="verify-opt-body">
+              <div class="verify-opt-name">Photo + Plate</div>
+              <div class="verify-opt-sub">Upload a photo with your reg plate visible</div>
+            </div>
+            <svg class="verify-opt-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <button class="verify-opt" onclick="doVerify('vin')">
+            <div class="verify-opt-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+            </div>
+            <div class="verify-opt-body">
+              <div class="verify-opt-name">VIN Number</div>
+              <div class="verify-opt-sub">17-digit code on your dashboard or door jamb</div>
+            </div>
+            <svg class="verify-opt-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+
+        <div id="verifyChecking" style="display:none;flex-direction:column;align-items:center;gap:14px;padding:32px 0;">
+          <div class="verify-spinner"></div>
+          <div style="font-size:13px;color:var(--text2);">Checking records…</div>
+        </div>
+
+        <div id="verifySuccess" style="display:none;flex-direction:column;align-items:center;gap:12px;padding:28px 0;">
+          <div class="verify-tick">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="verify-success-label">VERIFIED</div>
+        </div>
+
+        <button class="verify-cancel-btn" id="verifyCancelBtn" onclick="closeVerifySheet()">Cancel</button>
       </div>
     </div>
 

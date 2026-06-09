@@ -697,12 +697,17 @@ function renderProfile() {
 
   // Garage grid
   document.getElementById('ptab-garage').innerHTML = `<div class="garage-grid">` +
-    garage.map(c => `
+    garage.map((c, i) => `
       <div class="garage-card">
-        <div class="garage-img" style="background:${c.bg};">${carSVG}</div>
+        <div class="garage-img" style="background:${c.bg};">
+          ${c.verified ? `<div class="garage-verified-flag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>` : ''}
+        </div>
         <div class="garage-card-body">
           <div class="garage-car-name">${c.name}</div>
           <div class="garage-car-spec">${c.spec}</div>
+          ${c.verified
+            ? `<div class="garage-verified-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Verified</div>`
+            : `<button class="garage-verify-btn" onclick="openVerifySheet(${i})">Verify ownership</button>`}
         </div>
       </div>
     `).join('') +
@@ -752,10 +757,44 @@ function addGarageCar() {
   garage.push({
     name: name.trim(),
     spec: spec.trim(),
-    bg: bgOptions[Math.floor(Math.random() * bgOptions.length)]
+    bg: bgOptions[Math.floor(Math.random() * bgOptions.length)],
+    verified: false
   });
   saveGarage();
   renderProfile();
+}
+
+/* ── Garage Verification ── */
+let verifyIdx = null;
+
+function openVerifySheet(idx) {
+  verifyIdx = idx;
+  document.getElementById('verifyCarName').textContent = garage[idx].name;
+  document.getElementById('verifyOptions').style.display = '';
+  document.getElementById('verifyChecking').style.display = 'none';
+  document.getElementById('verifySuccess').style.display = 'none';
+  document.getElementById('verifyCancelBtn').style.display = '';
+  document.getElementById('verifySheet').classList.add('open');
+}
+
+function closeVerifySheet() {
+  document.getElementById('verifySheet').classList.remove('open');
+}
+
+function doVerify(method) {
+  document.getElementById('verifyOptions').style.display = 'none';
+  document.getElementById('verifyCancelBtn').style.display = 'none';
+  document.getElementById('verifyChecking').style.display = 'flex';
+  setTimeout(() => {
+    document.getElementById('verifyChecking').style.display = 'none';
+    document.getElementById('verifySuccess').style.display = 'flex';
+    garage[verifyIdx].verified = true;
+    saveGarage();
+    setTimeout(() => {
+      closeVerifySheet();
+      renderProfile();
+    }, 900);
+  }, 1600);
 }
 
 /* ── Auth ── */
@@ -1267,7 +1306,6 @@ function renderSwipeDeck() {
       <div class="swipe-card-img" style="background:${car.bg};">
         ${cachedImg ? `<img class="swipe-card-photo" src="${cachedImg}" alt="" onerror="this.remove()">` : ''}
         <div class="swipe-card-img-overlay"></div>
-        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.65"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2m-6 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0m-8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/></svg>
         <div class="swipe-like-label">LIKE</div>
         <div class="swipe-pass-label">PASS</div>
         <div class="swipe-card-badge">${car.type}</div>
