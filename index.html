@@ -98,6 +98,17 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
           Meets &amp; cruises near Fairfield, NJ
         </div>
+        <div class="speed-banner" onclick="openSpeedBoard()">
+          <div class="speed-banner-left">
+            <div class="speed-banner-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              SPEED BOARD
+            </div>
+            <div class="speed-banner-sub">Track-only · Top runs near you</div>
+          </div>
+          <div class="speed-banner-stat">195<span>mph</span></div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--text3);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
         <div id="meetsList"></div>
         <div style="height: 80px;"></div>
       </div>
@@ -422,6 +433,52 @@
         <label class="field-label">Notes for drivers</label>
         <textarea class="field-textarea" id="cruiseNotes" rows="3" placeholder="Route details, what to expect, meeting instructions…"></textarea>
       </div>
+    </div>
+
+    <!-- Speed Board screen -->
+    <div class="create-screen" id="speedScreen">
+
+      <!-- Leaderboard panel -->
+      <div id="speedBoardPanel" style="display:flex;flex-direction:column;height:100%;">
+        <div class="create-head">
+          <button class="create-cancel" onclick="closeSpeedBoard()">Close</button>
+          <div class="create-title">SPEED BOARD</div>
+          <div style="width:60px;"></div>
+        </div>
+        <div class="speed-disclaimer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="10.29 3.86 1.82 18 22.18 18 13.71 3.86 10.29 3.86"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Track &amp; closed course only — not for street use
+        </div>
+        <div class="speed-board-list" id="speedBoardList"></div>
+        <div class="speed-log-wrap">
+          <button class="speed-log-btn" onclick="openLogRun()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Log a Speed Run
+          </button>
+        </div>
+      </div>
+
+      <!-- Log run panel -->
+      <div id="speedLogPanel" style="display:none;flex-direction:column;height:100%;">
+        <div class="create-head">
+          <button class="create-cancel" onclick="closeLogRun()">Back</button>
+          <div class="create-title">LOG RUN</div>
+          <button class="create-share" id="speedSubmitBtn" onclick="submitRun()" disabled>Post</button>
+        </div>
+        <div class="create-body">
+          <label class="field-label">Your car</label>
+          <div id="speedCarChips" class="type-chips"></div>
+
+          <label class="field-label">Top speed (mph)</label>
+          <input class="field-input" id="speedMph" type="number" placeholder="e.g. 165" min="50" max="350" oninput="checkRunForm()">
+
+          <label class="field-label">Track / Venue</label>
+          <input class="field-input" id="speedTrack" placeholder="e.g. NJMP Lightning, NJ" oninput="checkRunForm()">
+
+          <p class="speed-legal">By posting you confirm this run was performed at a closed circuit, sanctioned track day, or private closed road. RevMatch does not promote street racing.</p>
+        </div>
+      </div>
+
     </div>
 
     <!-- DMs screen -->

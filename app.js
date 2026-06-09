@@ -146,10 +146,35 @@ function saveDMs() {
   try { localStorage.setItem('revmatch_dms', JSON.stringify(dmThreads)); } catch(e) {}
 }
 
+const SPEED_SEED = [
+  { uid: 'sp', init: 'SP', name: 'Spencer M.', verified: true,
+    car: '2021 Porsche 911 GT3', speed: 195, track: 'NJMP Lightning, NJ',
+    bg: 'radial-gradient(ellipse at 60% 50%, #2e1a2e 0%, #14081a 100%)', ts: _NOW - 1814400000 },
+  { uid: 'mk', init: 'MK', name: 'Mike K.', verified: true,
+    car: '2002 Nissan Skyline R34', speed: 172, track: 'Monticello Motor Club, NY',
+    bg: 'radial-gradient(ellipse at 30% 40%, #1a2e1a 0%, #0a140a 100%)', ts: _NOW - 1209600000 },
+  { uid: 'al', init: 'AL', name: 'Alex J.', verified: true,
+    car: '2019 BMW M3 Competition', speed: 168, track: 'Watkins Glen Int\'l, NY',
+    bg: 'radial-gradient(ellipse at 50% 40%, #2e2410 0%, #1a1305 100%)', ts: _NOW - 604800000 },
+  { uid: 'cr', init: 'CR', name: 'Carlos R.', verified: false,
+    car: '2022 Subaru WRX STI', speed: 148, track: 'Pocono Raceway, PA',
+    bg: 'radial-gradient(ellipse at 40% 60%, #1a1a2e 0%, #08081a 100%)', ts: _NOW - 259200000 },
+];
+function loadRuns() {
+  try {
+    const saved = localStorage.getItem('revmatch_runs');
+    return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(SPEED_SEED));
+  } catch(e) { return JSON.parse(JSON.stringify(SPEED_SEED)); }
+}
+function saveRuns() {
+  try { localStorage.setItem('revmatch_runs', JSON.stringify(speedRuns)); } catch(e) {}
+}
+
 let posts = loadPosts();
 let meets = loadMeets();
 let garage = loadGarage();
 let dmThreads = loadDMs();
+let speedRuns = loadRuns();
 
 const carSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2m-6 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0m-8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/></svg>`;
 const carMini = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>`;
@@ -812,6 +837,90 @@ function addGarageCar() {
   });
   saveGarage();
   renderProfile();
+}
+
+/* ── Speed Board ── */
+let selectedSpeedCar = null;
+
+function renderSpeedBoard() {
+  const sorted = [...speedRuns].sort((a, b) => b.speed - a.speed);
+  const rankColors = ['var(--accent)', '#c0c0c0', '#cd7f32'];
+  document.getElementById('speedBoardList').innerHTML = sorted.map((r, i) => `
+    <div class="speed-entry ${i === 0 ? 'speed-entry-first' : ''}">
+      <div class="speed-rank" style="color:${rankColors[i] || 'var(--text3)'}">${i + 1}</div>
+      <div class="speed-avatar" style="background:${r.bg}">${r.init}</div>
+      <div class="speed-entry-body">
+        <div class="speed-entry-name">${escapeHtml(r.name)}${r.verified ? verifySVG : ''}</div>
+        <div class="speed-entry-car">${escapeHtml(r.car)}</div>
+        <div class="speed-entry-track">${escapeHtml(r.track)}</div>
+      </div>
+      <div class="speed-entry-right">
+        <div class="speed-entry-num" style="${i === 0 ? 'color:var(--accent)' : ''}">${r.speed}</div>
+        <div class="speed-entry-unit">mph</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openSpeedBoard() {
+  document.getElementById('speedBoardPanel').style.display = 'flex';
+  document.getElementById('speedLogPanel').style.display = 'none';
+  renderSpeedBoard();
+  document.getElementById('speedScreen').classList.add('open');
+}
+
+function closeSpeedBoard() {
+  document.getElementById('speedScreen').classList.remove('open');
+}
+
+function openLogRun() {
+  selectedSpeedCar = null;
+  document.getElementById('speedMph').value = '';
+  document.getElementById('speedTrack').value = '';
+  document.getElementById('speedSubmitBtn').disabled = true;
+  const chips = document.getElementById('speedCarChips');
+  chips.innerHTML = garage.length
+    ? garage.map((c, i) =>
+        `<div class="type-chip" onclick="selectSpeedCar(${i},this,'speedCarChips')">${c.name}</div>`
+      ).join('')
+    : `<div style="font-size:12px;color:var(--text3);">Add a car to your garage first.</div>`;
+  document.getElementById('speedBoardPanel').style.display = 'none';
+  document.getElementById('speedLogPanel').style.display = 'flex';
+}
+
+function closeLogRun() {
+  document.getElementById('speedLogPanel').style.display = 'none';
+  document.getElementById('speedBoardPanel').style.display = 'flex';
+}
+
+function selectSpeedCar(idx, el, groupId) {
+  selectedSpeedCar = idx;
+  document.querySelectorAll(`#${groupId} .type-chip`).forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  checkRunForm();
+}
+
+function checkRunForm() {
+  const mph = parseInt(document.getElementById('speedMph').value, 10);
+  const track = document.getElementById('speedTrack').value.trim();
+  document.getElementById('speedSubmitBtn').disabled =
+    !(selectedSpeedCar !== null && mph >= 50 && mph <= 350 && track.length > 0);
+}
+
+function submitRun() {
+  const mph = parseInt(document.getElementById('speedMph').value, 10);
+  const track = document.getElementById('speedTrack').value.trim();
+  const car = garage[selectedSpeedCar];
+  if (!car) return;
+  speedRuns.push({
+    uid: 'me', init: 'AJ', name: 'Alex Johnson', verified: false,
+    car: car.name, speed: mph, track, bg: car.bg, ts: Date.now()
+  });
+  saveRuns();
+  document.getElementById('speedLogPanel').style.display = 'none';
+  document.getElementById('speedBoardPanel').style.display = 'flex';
+  renderSpeedBoard();
+  showToast('Speed run posted 🏁');
 }
 
 /* ── DMs ── */
