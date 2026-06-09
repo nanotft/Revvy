@@ -1705,3 +1705,111 @@
   display: flex; align-items: center; justify-content: center;
 }
 .radar-bc-dm svg { width: 16px; height: 16px; }
+
+/* ── Cop Radar banner ── */
+.cop-radar-banner {
+  align-items: center; justify-content: space-between;
+  margin: 0 16px 10px; padding: 12px 16px;
+  background: rgba(224,82,82,.1); border: 1px solid rgba(224,82,82,.3);
+  border-radius: 14px; cursor: pointer; gap: 12px;
+}
+.cop-radar-icon { font-size: 22px; flex-shrink: 0; }
+.cop-radar-title {
+  font-size: 13px; font-weight: 700; color: #e05252; letter-spacing: .5px;
+}
+.cop-report-btn {
+  background: #e05252; border: none; border-radius: 20px; padding: 7px 14px;
+  font-size: 13px; font-weight: 700; font-family: var(--body); color: #fff;
+  cursor: pointer; flex-shrink: 0;
+}
+
+/* ── Cop Radar screen ── */
+.cop-radar-screen { background: var(--bg); }
+.cop-radar-body {
+  flex: 1; overflow-y: auto; padding: 12px 16px;
+}
+.cop-clear-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; height: 280px; text-align: center; gap: 8px;
+}
+.cop-clear-icon { font-size: 48px; }
+.cop-clear-title {
+  font-family: var(--display); font-size: 22px; color: var(--text); letter-spacing: 1px;
+}
+.cop-clear-sub { font-size: 13px; color: var(--text3); max-width: 260px; line-height: 1.5; }
+.cop-report-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
+  display: flex; align-items: flex-start; gap: 12px; position: relative; overflow: hidden;
+}
+.cop-report-fresh {
+  border-color: rgba(224,82,82,.4);
+  background: rgba(224,82,82,.06);
+}
+.cop-report-icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+.cop-report-info { flex: 1; min-width: 0; }
+.cop-report-type {
+  font-size: 14px; font-weight: 700; color: var(--text);
+  display: flex; align-items: center; gap: 6px; margin-bottom: 3px;
+}
+.cop-fresh-badge {
+  font-size: 10px; font-weight: 800; background: #e05252;
+  color: #fff; border-radius: 4px; padding: 1px 5px; letter-spacing: .5px;
+}
+.cop-report-note { font-size: 13px; color: var(--text2); margin-bottom: 4px; }
+.cop-report-meta { font-size: 11px; color: var(--text3); }
+.cop-report-age-bar {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+  background: rgba(224,82,82,.1);
+}
+.cop-report-age-fill {
+  height: 100%; background: #e05252; border-radius: 0 2px 0 0; transition: width .3s;
+}
+
+/* ── Cop report sheet ── */
+.cop-sheet-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5);
+  z-index: 120;
+}
+.cop-sheet {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 130;
+  background: var(--surface); border-radius: 20px 20px 0 0;
+  padding: 12px 20px 40px; transform: translateY(100%);
+  transition: transform .3s cubic-bezier(.32,1,.23,1);
+}
+.cop-sheet.open { transform: translateY(0); }
+.cop-sheet-handle {
+  width: 36px; height: 4px; border-radius: 2px; background: var(--border);
+  margin: 0 auto 16px;
+}
+.cop-sheet-title {
+  font-family: var(--display); font-size: 18px; letter-spacing: 1px;
+  color: var(--text); margin-bottom: 16px;
+}
+.cop-type-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;
+}
+.cop-type-btn {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 12px; display: flex; flex-direction: column;
+  align-items: center; gap: 6px; cursor: pointer; transition: all .18s;
+  font-size: 13px; font-family: var(--body); color: var(--text2);
+}
+.cop-type-btn.active {
+  border-color: #e05252; background: rgba(224,82,82,.1); color: #e05252; font-weight: 600;
+}
+.cop-type-icon { font-size: 24px; }
+.cop-note-input {
+  width: 100%; box-sizing: border-box; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; font-size: 14px; font-family: var(--body);
+  color: var(--text); outline: none; margin-bottom: 14px;
+}
+.cop-note-input::placeholder { color: var(--text3); }
+.cop-submit-btn {
+  width: 100%; padding: 14px; border-radius: 12px; border: none;
+  background: #e05252; color: #fff; font-size: 15px; font-weight: 700;
+  font-family: var(--display); letter-spacing: 1px; cursor: pointer;
+  transition: opacity .2s;
+}
+.cop-submit-btn:disabled { opacity: 0.35; cursor: default; }

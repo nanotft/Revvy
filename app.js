@@ -426,6 +426,8 @@ function switchMeetsSeg(seg, el) {
   if (intro) intro.textContent = seg === 'cruises' ? 'Cruises near Fairfield, NJ' : 'Meets near Fairfield, NJ';
   const banner = document.getElementById('radarBanner');
   if (banner) banner.style.display = seg === 'cruises' ? 'flex' : 'none';
+  const copBanner = document.getElementById('copRadarBanner');
+  if (copBanner) copBanner.style.display = seg === 'cruises' ? 'flex' : 'none';
   renderMeets();
 }
 
@@ -939,6 +941,110 @@ function submitThread() {
   document.querySelectorAll('.forum-cat').forEach((c, i) => c.classList.toggle('active', i === 0));
   renderForum();
   openForumThread(newThread.id);
+}
+
+/* ── Cop Radar ── */
+const _N3 = Date.now();
+const COP_REPORT_SEED = [
+  { id:'cp1', type:'Speed Trap',  icon:'📷', note:'GSP on-ramp near Exit 151', reporter:'MK', ts: _N3-18*60000, active:true },
+  { id:'cp2', type:'Patrol Car',  icon:'🚔', note:'Route 46 W near Totowa',    reporter:'AL', ts: _N3-34*60000, active:true },
+  { id:'cp3', type:'Unmarked',    icon:'🚗', note:'I-80 E, past the rest stop', reporter:'SP', ts: _N3-62*60000, active:false },
+];
+const COP_EXPIRY_MS = 90 * 60 * 1000;
+
+function loadCopReports() {
+  try {
+    const s = localStorage.getItem('revmatch_cop');
+    return s ? JSON.parse(s) : JSON.parse(JSON.stringify(COP_REPORT_SEED));
+  } catch(e) { return JSON.parse(JSON.stringify(COP_REPORT_SEED)); }
+}
+function saveCopReports() {
+  try { localStorage.setItem('revmatch_cop', JSON.stringify(copReports)); } catch(e) {}
+}
+
+let copReports = loadCopReports();
+let selectedCopType = '';
+
+function openCopRadar() {
+  renderCopReports();
+  document.getElementById('copRadarScreen').classList.add('open');
+}
+function closeCopRadar() {
+  document.getElementById('copRadarScreen').classList.remove('open');
+  closeCopReport();
+}
+
+function fmtCopAge(ts) {
+  const m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 1) return 'Just now';
+  if (m < 60) return m + 'm ago';
+  return Math.floor(m / 60) + 'h ago';
+}
+
+function renderCopReports() {
+  const body = document.getElementById('copRadarBody');
+  const now = Date.now();
+  const active = copReports.filter(r => (now - r.ts) < COP_EXPIRY_MS);
+  const sub = document.getElementById('copBannerSub');
+  if (sub) sub.textContent = active.length ? `${active.length} active report${active.length > 1 ? 's' : ''} near you` : 'No reports — all clear';
+  if (!active.length) {
+    body.innerHTML = `<div class="cop-clear-state">
+      <div class="cop-clear-icon">✅</div>
+      <div class="cop-clear-title">All Clear</div>
+      <div class="cop-clear-sub">No reports in your area. Tap + Report if you spot something.</div>
+    </div>`;
+    return;
+  }
+  body.innerHTML = active.map(r => {
+    const age = now - r.ts;
+    const fresh = age < 20 * 60000;
+    return `<div class="cop-report-card ${fresh ? 'cop-report-fresh' : ''}">
+      <div class="cop-report-icon">${r.icon}</div>
+      <div class="cop-report-info">
+        <div class="cop-report-type">${r.type} ${fresh ? '<span class="cop-fresh-badge">LIVE</span>' : ''}</div>
+        ${r.note ? `<div class="cop-report-note">${r.note}</div>` : ''}
+        <div class="cop-report-meta">Reported by ${r.reporter} · ${fmtCopAge(r.ts)}</div>
+      </div>
+      <div class="cop-report-age-bar">
+        <div class="cop-report-age-fill" style="width:${Math.max(4, 100 - (age / COP_EXPIRY_MS * 100))}%"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openCopReport() {
+  selectedCopType = '';
+  document.querySelectorAll('.cop-type-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('copNoteInput').value = '';
+  document.getElementById('copSubmitBtn').disabled = true;
+  document.getElementById('copSheetOverlay').style.display = 'block';
+  document.getElementById('copSheet').classList.add('open');
+}
+function closeCopReport() {
+  document.getElementById('copSheetOverlay').style.display = 'none';
+  document.getElementById('copSheet').classList.remove('open');
+}
+function selectCopType(type, el) {
+  selectedCopType = type;
+  document.querySelectorAll('.cop-type-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('copSubmitBtn').disabled = false;
+}
+function submitCopReport() {
+  if (!selectedCopType) return;
+  const icons = { 'Speed Trap':'📷', 'Patrol Car':'🚔', 'Unmarked':'🚗', 'Checkpoint':'🚧' };
+  copReports.unshift({
+    id: 'cp' + Date.now(),
+    type: selectedCopType,
+    icon: icons[selectedCopType] || '🚔',
+    note: document.getElementById('copNoteInput').value.trim(),
+    reporter: 'You',
+    ts: Date.now(),
+    active: true,
+  });
+  saveCopReports();
+  closeCopReport();
+  renderCopReports();
 }
 
 /* ── Radar ── */

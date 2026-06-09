@@ -128,6 +128,14 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
           <span id="meetsIntroText">Meets near Fairfield, NJ</span>
         </div>
+        <div class="cop-radar-banner" id="copRadarBanner" style="display:none;" onclick="openCopRadar()">
+          <div class="cop-radar-icon">🚔</div>
+          <div class="radar-banner-body">
+            <div class="cop-radar-title">COP RADAR</div>
+            <div class="radar-banner-sub" id="copBannerSub">Community reports near you</div>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--text3);flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
         <div class="radar-banner" id="radarBanner" style="display:none;" onclick="openRadar()">
           <div class="radar-banner-icon">
             <div class="radar-mini-sweep"></div>
@@ -546,6 +554,43 @@
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- Cop Radar screen -->
+    <div class="create-screen cop-radar-screen" id="copRadarScreen">
+      <div class="create-head">
+        <button class="create-cancel" onclick="closeCopRadar()">Close</button>
+        <div class="create-title" style="color:#e05252;">🚔 COP RADAR</div>
+        <button class="cop-report-btn" onclick="openCopReport()">+ Report</button>
+      </div>
+      <div class="cop-radar-body" id="copRadarBody"></div>
+    </div>
+
+    <!-- Cop report sheet -->
+    <div class="cop-sheet-overlay" id="copSheetOverlay" onclick="closeCopReport()"></div>
+    <div class="cop-sheet" id="copSheet">
+      <div class="cop-sheet-handle"></div>
+      <div class="cop-sheet-title">Report a Sighting</div>
+      <div class="cop-type-grid" id="copTypeGrid">
+        <div class="cop-type-btn" onclick="selectCopType('Speed Trap',this)">
+          <span class="cop-type-icon">📷</span>
+          <span>Speed Trap</span>
+        </div>
+        <div class="cop-type-btn" onclick="selectCopType('Patrol Car',this)">
+          <span class="cop-type-icon">🚔</span>
+          <span>Patrol Car</span>
+        </div>
+        <div class="cop-type-btn" onclick="selectCopType('Unmarked',this)">
+          <span class="cop-type-icon">🚗</span>
+          <span>Unmarked</span>
+        </div>
+        <div class="cop-type-btn" onclick="selectCopType('Checkpoint',this)">
+          <span class="cop-type-icon">🚧</span>
+          <span>Checkpoint</span>
+        </div>
+      </div>
+      <input class="cop-note-input" id="copNoteInput" placeholder="Street or area (optional)" autocomplete="off">
+      <button class="cop-submit-btn" id="copSubmitBtn" onclick="submitCopReport()" disabled>Submit Report</button>
     </div>
 
     <!-- New thread screen -->
