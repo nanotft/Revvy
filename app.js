@@ -1174,6 +1174,35 @@ function selectBlip(id) {
   document.getElementById('radarBcDist').textContent = blip.dist + ' away';
 }
 
+/* ── Theme ── */
+(function applyTheme() {
+  const saved = localStorage.getItem('revmatch_theme');
+  if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  document.addEventListener('DOMContentLoaded', () => {
+    updateThemeIcon(saved === 'light');
+  });
+})();
+
+function toggleTheme() {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  if (isLight) {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('revmatch_theme', 'dark');
+    updateThemeIcon(false);
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
+    localStorage.setItem('revmatch_theme', 'light');
+    updateThemeIcon(true);
+  }
+}
+
+function updateThemeIcon(isLight) {
+  const btn = document.getElementById('themeToggleBtn');
+  if (!btn) return;
+  btn.querySelector('.theme-icon-moon').style.display = isLight ? 'none' : '';
+  btn.querySelector('.theme-icon-sun').style.display  = isLight ? '' : 'none';
+}
+
 /* ── View switching ── */
 function switchView(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
