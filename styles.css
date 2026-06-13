@@ -885,109 +885,200 @@
   .match-deck-title { font-family: var(--display); font-size: 20px; letter-spacing: 1px; }
   .swipe-counter { font-size: 12px; font-family: var(--mono); color: var(--text3); }
 
-  .swipe-area { flex: 1; padding: 14px 16px 6px; position: relative; overflow: hidden; }
+  .swipe-area { flex: 1; padding: 10px 14px 4px; position: relative; overflow: hidden; }
   .swipe-deck { position: relative; width: 100%; height: 100%; }
 
+  /* Stack depth cards */
+  .swipe-stack {
+    position: absolute; inset: 0; border-radius: 22px; overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  }
+  .swipe-s2 { transform: scale(0.87) translateY(22px); z-index: 0; opacity: 0.5; }
+  .swipe-s1 { transform: scale(0.94) translateY(11px); z-index: 1; opacity: 0.78; }
+
+  /* Main card */
   .swipe-card {
-    position: absolute; inset: 0; border-radius: 20px; overflow: hidden;
-    background: var(--surface); box-shadow: 0 10px 40px rgba(0,0,0,0.55);
+    position: absolute; inset: 0; border-radius: 22px; overflow: hidden;
+    background: var(--surface); box-shadow: 0 14px 50px rgba(0,0,0,0.6);
     cursor: grab; user-select: none; touch-action: none; z-index: 2;
+    display: flex; flex-direction: column;
   }
   .swipe-card:active { cursor: grabbing; }
-  .swipe-card-next {
-    position: absolute; inset: 0; border-radius: 20px; background: var(--surface);
-    transform: scale(0.94) translateY(12px); z-index: 1; box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-  }
 
-  .swipe-card-img {
-    height: 52%; display: flex; align-items: center; justify-content: center;
-    position: relative; overflow: hidden;
+  /* Hero image area */
+  .swipe-hero {
+    position: relative; flex: 1; min-height: 0; overflow: hidden;
+    background: linear-gradient(135deg, #1a1a2e, #0f0f1a);
   }
-  .swipe-card-img > svg { width: 160px; height: 160px; pointer-events: none; position: relative; z-index: 2; }
-  .swipe-card-photo {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
+  .swipe-hero-img {
+    position: absolute; inset: 0; width: 100%; height: 100%;
     object-fit: cover; object-position: center 30%;
     animation: photoFadeIn 0.35s ease-out;
   }
-  .swipe-card-img-overlay {
-    position: absolute; inset: 0;
-    background: linear-gradient(to bottom, rgba(0,0,0,0) 30%, rgba(0,0,0,0.6) 100%);
-    pointer-events: none; z-index: 1;
+  .swipe-hero-grad {
+    position: absolute; inset: 0; z-index: 1;
+    background: linear-gradient(to bottom, rgba(0,0,0,0) 35%, rgba(0,0,0,0.92) 100%);
   }
   @keyframes photoFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-  .swipe-card-badge {
-    position: absolute; top: 12px; right: 12px; z-index: 3;
-    background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.14); color: var(--text);
-    border-radius: 100px; padding: 4px 10px; font-size: 10px; font-family: var(--mono);
+  /* Swipe direction labels */
+  .swipe-lbl {
+    position: absolute; font-family: var(--display); font-size: 28px; letter-spacing: 1.5px;
+    padding: 4px 12px; border-radius: 8px; opacity: 0; pointer-events: none; z-index: 4;
+    top: 20px;
   }
-  .swipe-card-origin {
-    position: absolute; top: 12px; left: 12px; z-index: 3;
-    background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.14); color: var(--text3);
-    border-radius: 100px; padding: 4px 10px; font-size: 10px; font-family: var(--mono);
+  .swipe-lbl-like  { left: 14px;  color: #4cff91; border: 3px solid #4cff91; transform: rotate(-13deg); }
+  .swipe-lbl-pass  { right: 14px; color: #ff4444; border: 3px solid #ff4444; transform: rotate(13deg); }
+  .swipe-lbl-super { left: 50%; transform: translateX(-50%); color: var(--accent); border: 3px solid var(--accent); }
+
+  /* Match score ring */
+  .swipe-ring-wrap {
+    position: absolute; top: 12px; right: 12px; z-index: 4;
+    width: 54px; height: 54px;
+  }
+  .swipe-ring-svg { width: 54px; height: 54px; }
+  .swipe-ring-inner {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    gap: 0;
+  }
+  .swipe-ring-num { font-family: var(--mono); font-size: 13px; font-weight: 700; color: #fff; }
+  .swipe-ring-pct { font-family: var(--mono); font-size: 9px; color: rgba(255,255,255,.65); margin-top: 3px; }
+
+  /* Type badge */
+  .swipe-hero-type {
+    position: absolute; top: 12px; left: 12px; z-index: 4;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.16); color: rgba(255,255,255,.85);
+    border-radius: 100px; padding: 4px 11px; font-size: 10px; font-family: var(--mono); letter-spacing: .5px;
   }
 
-  .swipe-like-label, .swipe-pass-label {
-    position: absolute; top: 18px; font-family: var(--display); font-size: 30px;
-    padding: 4px 12px; border-radius: 8px; opacity: 0; pointer-events: none; letter-spacing: 1px; z-index: 3;
+  /* Bottom info overlaid on hero */
+  .swipe-hero-foot {
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 3; padding: 0 16px 14px;
   }
-  .swipe-like-label { left: 14px; color: #4cff91; border: 3px solid #4cff91; transform: rotate(-12deg); }
-  .swipe-pass-label { right: 14px; color: #ff4444; border: 3px solid #ff4444; transform: rotate(12deg); }
+  .swipe-hero-origin {
+    font-size: 10px; font-family: var(--mono); letter-spacing: 1.5px; color: var(--accent);
+    text-transform: uppercase; margin-bottom: 2px;
+  }
+  .swipe-hero-name {
+    font-family: var(--display); font-size: 28px; color: #fff; line-height: 1;
+    letter-spacing: .5px; text-shadow: 0 2px 14px rgba(0,0,0,.55);
+  }
+  .swipe-hero-price {
+    font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--accent); margin-top: 4px;
+  }
 
-  .swipe-card-info {
-    padding: 14px 16px 12px; height: 48%;
-    display: flex; flex-direction: column; justify-content: space-between;
+  /* Stat row */
+  .swipe-stat-row {
+    display: flex; align-items: stretch; height: 54px; flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
   }
-  .swipe-card-price { font-family: var(--display); font-size: 30px; color: var(--accent); line-height: 1; }
-  .swipe-card-name { font-family: var(--display); font-size: 20px; color: var(--text); line-height: 1.1; margin-top: 3px; }
+  .swipe-sc {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  }
+  .swipe-sc-v { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--text); }
+  .swipe-sc-k { font-size: 8px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: .4px; }
+  .swipe-sc-sep { width: 1px; background: var(--border); margin: 10px 0; flex-shrink: 0; }
 
-  .swipe-card-stats {
-    display: flex; border: 1px solid var(--border); border-radius: 10px;
-    overflow: hidden; margin-top: 10px;
+  /* Tag row */
+  .swipe-tag-row {
+    display: flex; gap: 6px; padding: 9px 14px 12px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0;
   }
-  .swipe-stat { flex: 1; text-align: center; padding: 8px 4px; border-right: 1px solid var(--border); }
-  .swipe-stat:last-child { border-right: none; }
-  .swipe-stat-val { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--text); }
-  .swipe-stat-lbl { font-size: 9px; color: var(--text3); font-family: var(--mono); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .swipe-tag-row::-webkit-scrollbar { display: none; }
+  .swipe-tag-pill {
+    flex-shrink: 0; padding: 4px 10px; border-radius: 20px;
+    border: 1px solid var(--border); font-size: 11px; font-family: var(--mono);
+    color: var(--text2); white-space: nowrap; cursor: default;
+  }
+  .swipe-tag-desc { color: var(--accent); border-color: rgba(232,255,61,.3); cursor: pointer; }
 
-  .swipe-card-specs { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
-  .swipe-card-desc {
-    font-size: 11px; color: var(--text2); line-height: 1.45; margin-top: 6px;
-    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    cursor: pointer; transition: all 0.2s;
-  }
-  .swipe-card-desc.expanded {
-    display: block; overflow: visible; -webkit-line-clamp: unset;
-  }
-  .desc-more {
-    color: var(--accent); font-size: 9px; text-transform: uppercase;
-    letter-spacing: 0.5px; font-family: var(--mono); margin-left: 3px;
-  }
-  .swipe-card-desc.expanded .desc-more { display: none; }
-
+  /* Action buttons */
   .swipe-actions {
     display: flex; justify-content: center; align-items: center;
-    gap: 36px; padding: 12px 20px 28px; flex-shrink: 0;
+    gap: 20px; padding: 10px 20px 22px; flex-shrink: 0;
   }
-  .swipe-btn {
+  .swipe-act-btn {
     display: flex; align-items: center; justify-content: center;
-    border: none; border-radius: 50%; cursor: pointer; transition: transform 0.15s;
+    border: none; border-radius: 50%; cursor: pointer;
+    transition: transform 0.14s, box-shadow 0.14s;
   }
-  .swipe-btn:active { transform: scale(0.88); }
-  .swipe-pass { width: 60px; height: 60px; background: rgba(255,68,68,0.1); color: #ff4444; border: 1.5px solid rgba(255,68,68,0.25); }
-  .swipe-like { width: 70px; height: 70px; background: rgba(232,255,61,0.1); color: var(--accent); border: 1.5px solid rgba(232,255,61,0.25); }
-  .swipe-pass svg { width: 26px; height: 26px; }
-  .swipe-like svg { width: 32px; height: 32px; }
+  .swipe-act-btn:active { transform: scale(0.86) !important; }
+  .swipe-act-pass {
+    width: 58px; height: 58px;
+    background: rgba(255,68,68,.1); color: #ff4444;
+    border: 1.5px solid rgba(255,68,68,.3);
+    box-shadow: 0 0 0 rgba(255,68,68,0);
+  }
+  .swipe-act-pass:hover { box-shadow: 0 4px 22px rgba(255,68,68,.25); transform: scale(1.05); }
+  .swipe-act-pass svg { width: 24px; height: 24px; }
+  .swipe-act-super {
+    width: 44px; height: 44px;
+    background: rgba(232,255,61,.1); color: var(--accent);
+    border: 1.5px solid rgba(232,255,61,.3);
+  }
+  .swipe-act-super:hover { transform: scale(1.08); }
+  .swipe-act-super svg { width: 18px; height: 18px; }
+  .swipe-act-like {
+    width: 66px; height: 66px;
+    background: rgba(76,255,145,.1); color: #4cff91;
+    border: 1.5px solid rgba(76,255,145,.3);
+    box-shadow: 0 0 0 rgba(76,255,145,0);
+  }
+  .swipe-act-like:hover  { box-shadow: 0 4px 22px rgba(76,255,145,.25); transform: scale(1.05); }
+  .swipe-act-like svg { width: 28px; height: 28px; }
+
+  /* Match celebration overlay */
+  .match-celebrate {
+    position: absolute; inset: 0; z-index: 20;
+    flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(8,8,8,.88); backdrop-filter: blur(6px);
+    pointer-events: none; border-radius: 22px;
+    animation: mc-in .18s ease-out;
+  }
+  @keyframes mc-in { from { opacity:0; } to { opacity:1; } }
+  .mc-particles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  @keyframes mc-particle {
+    0%   { transform: translate(0,0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+  }
+  .mc-particle {
+    position: absolute; left: 50%; top: 45%; margin: -4px;
+    animation: mc-particle .75s cubic-bezier(.2,.8,.4,1) var(--delay,0ms) forwards;
+  }
+  .mc-icon {
+    font-size: 54px; line-height: 1; z-index: 1;
+    animation: mc-pop .38s cubic-bezier(.175,.885,.32,1.275);
+  }
+  @keyframes mc-pop {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.22); } 100% { transform: scale(1); opacity: 1; }
+  }
+  .mc-label {
+    font-family: var(--display); font-size: 46px; color: var(--accent);
+    letter-spacing: 5px; line-height: 1; margin-top: 6px; z-index: 1;
+    animation: mc-up .32s .1s cubic-bezier(.175,.885,.32,1.275) both;
+  }
+  .mc-name {
+    font-family: var(--display); font-size: 18px; color: #fff; margin-top: 8px;
+    letter-spacing: .5px; z-index: 1;
+    animation: mc-up .32s .2s cubic-bezier(.175,.885,.32,1.275) both;
+  }
+  .mc-sub {
+    font-size: 11px; color: rgba(255,255,255,.45); margin-top: 6px;
+    font-family: var(--mono); z-index: 1;
+    animation: mc-up .32s .28s cubic-bezier(.175,.885,.32,1.275) both;
+  }
+  @keyframes mc-up {
+    from { transform: translateY(18px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
 
   .swipe-empty {
     position: absolute; inset: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     text-align: center; padding: 30px;
   }
-  .swipe-empty > svg { width: 52px; height: 52px; color: var(--accent); opacity: 0.3; margin-bottom: 14px; }
+  .swipe-empty-icon { font-size: 52px; margin-bottom: 12px; opacity: .8; }
   .swipe-empty-title { font-family: var(--display); font-size: 28px; color: var(--text); }
   .swipe-empty-sub { font-size: 13px; color: var(--text2); margin-top: 8px; line-height: 1.5; }
 
@@ -1918,12 +2009,15 @@
   background: #fff; border-color: rgba(0,0,0,.12); color: #111;
 }
 [data-theme="light"] .login-btn { background: #111; color: #f2f2f0; }
-[data-theme="light"] .swipe-card-img-overlay {
-  background: linear-gradient(to bottom, transparent 45%, rgba(240,240,238,.92) 100%);
+[data-theme="light"] .swipe-hero-grad {
+  background: linear-gradient(to bottom, rgba(255,255,255,0) 30%, rgba(240,240,238,.94) 100%);
 }
-[data-theme="light"] .swipe-card-info { color: #111; }
-[data-theme="light"] .swipe-like-label { color: #111; border-color: #111; }
-[data-theme="light"] .swipe-nope-label { color: #e05252; border-color: #e05252; }
+[data-theme="light"] .swipe-hero-name,
+[data-theme="light"] .swipe-hero-price,
+[data-theme="light"] .swipe-hero-origin { color: #111; }
+[data-theme="light"] .swipe-hero-price { color: #666; }
+[data-theme="light"] .swipe-lbl-like { color: #0a9a50; border-color: #0a9a50; }
+[data-theme="light"] .swipe-lbl-pass { color: #d02020; border-color: #d02020; }
 [data-theme="light"] .type-chip {
   background: #fff; border-color: rgba(0,0,0,.12); color: #555;
 }

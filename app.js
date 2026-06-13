@@ -1958,11 +1958,17 @@ let matchPrefs = { budget: 'any', carType: 'Any', brand: 'Any', drive: 'Any', fu
 let swipeQueue = [];
 let swipeIndex = 0;
 let isDragging = false;
-let dragStartX = 0;
-let dragCurrentX = 0;
+let dragStartX = 0, dragStartY = 0;
+let dragCurrentX = 0, dragCurrentY = 0;
 let likedCars = (() => {
   try { return JSON.parse(localStorage.getItem('revmatch_liked') || '[]'); } catch(e) { return []; }
 })();
+let superLikedCars = (() => {
+  try { return JSON.parse(localStorage.getItem('revmatch_superlikes') || '[]'); } catch(e) { return []; }
+})();
+function saveSuperLikes() {
+  try { localStorage.setItem('revmatch_superlikes', JSON.stringify(superLikedCars)); } catch(e) {}
+}
 
 function saveLikedCars() {
   try { localStorage.setItem('revmatch_liked', JSON.stringify(likedCars)); } catch(e) {}
@@ -2043,16 +2049,65 @@ async function startSwiping() {
   renderSwipeDeck();
 }
 
+function calcMatchScore(car) {
+  let score = 64;
+  const b = matchPrefs.budget;
+  if (b === 'any') {
+    score += 10;
+  } else {
+    const ranges = { u40:[0,40000], '40-70':[40000,70000], '70-100':[70000,100000], '100+':[100000,250000] };
+    const [lo, hi] = ranges[b] || [0,999999];
+    const mid = (lo + hi) / 2, half = (hi - lo) / 2;
+    score += Math.round((1 - Math.min(1, Math.abs(car.price - mid) / half)) * 12);
+  }
+  if (matchPrefs.carType === 'Any') score += 7;
+  else score += car.type === matchPrefs.carType ? 11 : 3;
+  if (matchPrefs.brand === 'Any') score += 6;
+  else score += car.brand === matchPrefs.brand ? 9 : 2;
+  const mh = matchPrefs.mustHave;
+  if (!mh.length) { score += 6; }
+  else {
+    const tags = car.tags.map(t => t.toLowerCase());
+    const hits = mh.filter(m => tags.some(t => t.includes(m.toLowerCase())));
+    score += Math.round((hits.length / mh.length) * 6);
+  }
+  score += Math.floor(Math.random() * 4);
+  return Math.min(99, Math.max(72, score));
+}
+
+function showMatchCelebrate(car, isSuper) {
+  const el = document.getElementById('matchCelebrate');
+  document.getElementById('mcIcon').textContent = isSuper ? '⭐' : '💛';
+  document.getElementById('mcLabel').textContent = isSuper ? 'SUPER LIKE' : 'SAVED';
+  document.getElementById('mcName').textContent = `${car.year} ${car.make} ${car.model}`;
+  document.getElementById('mcSub').textContent = isSuper ? 'Top of your wishlist' : 'Added to wishlist';
+  const colors = ['#e8ff3d','#ffffff','#c8e800','#ffdd00','#b8ff00'];
+  document.getElementById('mcParticles').innerHTML = Array.from({length: 22}, (_, i) => {
+    const angle = (i / 22) * 360 + Math.random() * 16;
+    const dist = 70 + Math.random() * 90;
+    const tx = (Math.cos(angle * Math.PI / 180) * dist).toFixed(1);
+    const ty = (Math.sin(angle * Math.PI / 180) * dist).toFixed(1);
+    const size = 5 + Math.floor(Math.random() * 7);
+    const delay = Math.floor(Math.random() * 80);
+    const shape = Math.random() > 0.5 ? '50%' : '3px';
+    return `<div class="mc-particle" style="background:${colors[i%colors.length]};width:${size}px;height:${size}px;border-radius:${shape};--tx:${tx}px;--ty:${ty}px;--delay:${delay}ms"></div>`;
+  }).join('');
+  el.style.display = 'flex';
+  setTimeout(() => { el.style.display = 'none'; }, 1500);
+}
+
 function renderSwipeDeck() {
   const deck = document.getElementById('swipeDeck');
   const remaining = swipeQueue.length - swipeIndex;
 
   if (swipeIndex >= swipeQueue.length) {
+    const total = likedCars.length;
+    const supers = superLikedCars.length;
     deck.innerHTML = `<div class="swipe-empty">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-      <div class="swipe-empty-title">That's all of them</div>
-      <div class="swipe-empty-sub">You saved ${likedCars.length} car${likedCars.length !== 1 ? 's' : ''}. Change preferences to see more.</div>
-      <button class="match-go-btn" style="margin-top:20px;" onclick="backToPrefs()">Change Preferences</button>
+      <div class="swipe-empty-icon">🏁</div>
+      <div class="swipe-empty-title">All caught up</div>
+      <div class="swipe-empty-sub">You saved <strong>${total}</strong> car${total !== 1 ? 's' : ''}${supers ? ` · <strong>${supers}</strong> super liked` : ''}.</div>
+      <button class="match-go-btn" style="margin-top:24px;" onclick="backToPrefs()">Change Preferences</button>
     </div>`;
     document.getElementById('swipeActions').style.display = 'none';
     document.getElementById('swipeCounter').textContent = '';
@@ -2060,34 +2115,63 @@ function renderSwipeDeck() {
   }
 
   document.getElementById('swipeCounter').textContent = remaining + ' left';
-  const car = swipeQueue[swipeIndex];
-  const next = swipeQueue[swipeIndex + 1];
-
+  const car  = swipeQueue[swipeIndex];
+  const n1   = swipeQueue[swipeIndex + 1];
+  const n2   = swipeQueue[swipeIndex + 2];
+  const score = calcMatchScore(car);
+  const circ  = 119.4;
+  const dash  = ((score / 100) * circ).toFixed(1);
+  const ringColor = score >= 92 ? '#e8ff3d' : score >= 80 ? '#7dde92' : '#5ba8e0';
+  const driveTag  = car.tags[0] || '';
   const cachedImg = cardImageCache[`${car.make}|${car.model}`];
   preloadCardImages(swipeIndex);
 
-  deck.innerHTML = (next ? `<div class="swipe-card-next" style="background:${next.bg};"></div>` : '') +
+  deck.innerHTML =
+    (n2 ? `<div class="swipe-stack swipe-s2" style="background:${n2.bg}"></div>` : '') +
+    (n1 ? `<div class="swipe-stack swipe-s1" style="background:${n1.bg}"></div>` : '') +
     `<div class="swipe-card" id="activeCard">
-      <div class="swipe-card-img" style="background:${car.bg};">
-        ${cachedImg ? `<img class="swipe-card-photo" src="${cachedImg}" alt="" onerror="this.remove()">` : ''}
-        <div class="swipe-card-img-overlay"></div>
-        <div class="swipe-like-label">LIKE</div>
-        <div class="swipe-pass-label">PASS</div>
-        <div class="swipe-card-badge">${car.type}</div>
-        <div class="swipe-card-origin">${car.brand}</div>
+      <div class="swipe-hero" style="background:${car.bg};">
+        ${cachedImg ? `<img class="swipe-hero-img" src="${cachedImg}" alt="" onerror="this.remove()">` : ''}
+        <div class="swipe-hero-grad"></div>
+
+        <div class="swipe-lbl swipe-lbl-like">LIKE</div>
+        <div class="swipe-lbl swipe-lbl-pass">PASS</div>
+        <div class="swipe-lbl swipe-lbl-super">⭐ SUPER</div>
+
+        <div class="swipe-ring-wrap">
+          <svg viewBox="0 0 48 48" class="swipe-ring-svg">
+            <circle cx="24" cy="24" r="19" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="3.5"/>
+            <circle cx="24" cy="24" r="19" fill="none" stroke="${ringColor}"
+              stroke-width="3.5" stroke-dasharray="${dash} ${circ}" stroke-linecap="round"
+              transform="rotate(-90 24 24)"/>
+          </svg>
+          <div class="swipe-ring-inner">
+            <span class="swipe-ring-num">${score}</span><span class="swipe-ring-pct">%</span>
+          </div>
+        </div>
+
+        <div class="swipe-hero-type">${car.type}</div>
+
+        <div class="swipe-hero-foot">
+          <div class="swipe-hero-origin">${car.brand}</div>
+          <div class="swipe-hero-name">${car.year} ${car.make} ${car.model}</div>
+          <div class="swipe-hero-price">$${car.price.toLocaleString()}</div>
+        </div>
       </div>
-      <div class="swipe-card-info">
-        <div>
-          <div class="swipe-card-price">$${car.price.toLocaleString()}</div>
-          <div class="swipe-card-name">${car.year} ${car.make} ${car.model}</div>
-        </div>
-        <div class="swipe-card-stats">
-          <div class="swipe-stat"><div class="swipe-stat-val">${car.power}</div><div class="swipe-stat-lbl">Power</div></div>
-          <div class="swipe-stat"><div class="swipe-stat-val">${car.accel}</div><div class="swipe-stat-lbl">0-60</div></div>
-          <div class="swipe-stat"><div class="swipe-stat-val">${car.economy}</div><div class="swipe-stat-lbl">Economy</div></div>
-        </div>
-        <div class="swipe-card-specs">${car.tags.map(t => `<span class="spec">${t}</span>`).join('')}</div>
-        <div class="swipe-card-desc" onclick="this.classList.toggle('expanded')">${car.desc} <span class="desc-more">more</span></div>
+
+      <div class="swipe-stat-row">
+        <div class="swipe-sc"><div class="swipe-sc-v">${car.power}</div><div class="swipe-sc-k">POWER</div></div>
+        <div class="swipe-sc-sep"></div>
+        <div class="swipe-sc"><div class="swipe-sc-v">${car.accel}</div><div class="swipe-sc-k">0–60</div></div>
+        <div class="swipe-sc-sep"></div>
+        <div class="swipe-sc"><div class="swipe-sc-v">${car.economy}</div><div class="swipe-sc-k">ECON</div></div>
+        <div class="swipe-sc-sep"></div>
+        <div class="swipe-sc"><div class="swipe-sc-v">${driveTag || '—'}</div><div class="swipe-sc-k">DRIVE</div></div>
+      </div>
+
+      <div class="swipe-tag-row">
+        ${car.tags.slice(1, 6).map(t => `<span class="swipe-tag-pill">${t}</span>`).join('')}
+        ${car.desc ? `<span class="swipe-tag-pill swipe-tag-desc" title="${car.desc}">More info</span>` : ''}
       </div>
     </div>`;
 
@@ -2103,9 +2187,11 @@ function attachSwipeListeners() {
 
 function onDragStart(e) {
   isDragging = true;
-  dragStartX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+  const pt = e.type === 'touchstart' ? e.touches[0] : e;
+  dragStartX = pt.clientX;
+  dragStartY = pt.clientY;
   const card = document.getElementById('activeCard');
-  if (card) { card.style.transition = 'none'; }
+  if (card) card.style.transition = 'none';
   document.addEventListener('mousemove', onDragMove);
   document.addEventListener('touchmove', onDragMove, { passive: true });
   document.addEventListener('mouseup', onDragEnd, { once: true });
@@ -2116,19 +2202,32 @@ function onDragMove(e) {
   if (!isDragging) return;
   const card = document.getElementById('activeCard');
   if (!card) return;
-  dragCurrentX = (e.type === 'touchmove' ? e.touches[0].clientX : e.clientX) - dragStartX;
-  card.style.transform = `translateX(${dragCurrentX}px) rotate(${dragCurrentX * 0.055}deg)`;
-  const like = card.querySelector('.swipe-like-label');
-  const pass = card.querySelector('.swipe-pass-label');
-  if (dragCurrentX > 20) {
-    like.style.opacity = Math.min(1, (dragCurrentX - 20) / 60);
-    pass.style.opacity = 0;
-  } else if (dragCurrentX < -20) {
-    pass.style.opacity = Math.min(1, (-dragCurrentX - 20) / 60);
-    like.style.opacity = 0;
+  const pt = e.type === 'touchmove' ? e.touches[0] : e;
+  dragCurrentX = pt.clientX - dragStartX;
+  dragCurrentY = pt.clientY - dragStartY;
+  const likeEl  = card.querySelector('.swipe-lbl-like');
+  const passEl  = card.querySelector('.swipe-lbl-pass');
+  const superEl = card.querySelector('.swipe-lbl-super');
+
+  const goingUp = dragCurrentY < -24 && Math.abs(dragCurrentY) > Math.abs(dragCurrentX) * 1.4;
+  if (goingUp) {
+    card.style.transform = `translateY(${dragCurrentY}px) scale(${Math.min(1.04, 1 - dragCurrentY / 3000)})`;
+    if (superEl) superEl.style.opacity = Math.min(1, (-dragCurrentY - 24) / 60);
+    if (likeEl)  likeEl.style.opacity  = 0;
+    if (passEl)  passEl.style.opacity  = 0;
   } else {
-    like.style.opacity = 0;
-    pass.style.opacity = 0;
+    card.style.transform = `translateX(${dragCurrentX}px) rotate(${dragCurrentX * 0.05}deg)`;
+    if (superEl) superEl.style.opacity = 0;
+    if (dragCurrentX > 20) {
+      if (likeEl) likeEl.style.opacity = Math.min(1, (dragCurrentX - 20) / 55);
+      if (passEl) passEl.style.opacity = 0;
+    } else if (dragCurrentX < -20) {
+      if (passEl) passEl.style.opacity = Math.min(1, (-dragCurrentX - 20) / 55);
+      if (likeEl) likeEl.style.opacity = 0;
+    } else {
+      if (likeEl) likeEl.style.opacity = 0;
+      if (passEl) passEl.style.opacity = 0;
+    }
   }
 }
 
@@ -2137,39 +2236,54 @@ function onDragEnd() {
   document.removeEventListener('touchmove', onDragMove);
   if (!isDragging) return;
   isDragging = false;
-  if (dragCurrentX > 90) { animateCardOut('right'); }
-  else if (dragCurrentX < -90) { animateCardOut('left'); }
-  else {
+  const goingUp = dragCurrentY < -24 && Math.abs(dragCurrentY) > Math.abs(dragCurrentX) * 1.4;
+  if (goingUp && dragCurrentY < -100) {
+    animateCardOut('up');
+  } else if (dragCurrentX > 90) {
+    animateCardOut('right');
+  } else if (dragCurrentX < -90) {
+    animateCardOut('left');
+  } else {
     const card = document.getElementById('activeCard');
     if (card) {
       card.style.transition = 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1)';
       card.style.transform = '';
-      card.querySelector('.swipe-like-label').style.opacity = 0;
-      card.querySelector('.swipe-pass-label').style.opacity = 0;
+      card.querySelectorAll('.swipe-lbl').forEach(l => l.style.opacity = 0);
     }
   }
   dragCurrentX = 0;
+  dragCurrentY = 0;
 }
 
 function animateCardOut(direction) {
   const card = document.getElementById('activeCard');
   if (!card) return;
-  const x = direction === 'right' ? 520 : -520;
-  const r = direction === 'right' ? 28 : -28;
-  card.style.transition = 'transform 0.36s ease-out, opacity 0.36s';
-  card.style.transform = `translateX(${x}px) rotate(${r}deg)`;
-  card.style.opacity = '0';
+  const saved = swipeQueue[swipeIndex];
+  card.style.transition = 'transform 0.34s ease-out, opacity 0.34s';
   if (direction === 'right') {
-    const saved = swipeQueue[swipeIndex];
+    card.style.transform = 'translateX(520px) rotate(28deg)';
+    card.style.opacity = '0';
     likedCars.push(saved);
     saveLikedCars();
-    setTimeout(() => showToast(`${saved.make} ${saved.model} saved!`), 80);
+    setTimeout(() => showMatchCelebrate(saved, false), 50);
+  } else if (direction === 'left') {
+    card.style.transform = 'translateX(-520px) rotate(-28deg)';
+    card.style.opacity = '0';
+  } else if (direction === 'up') {
+    card.style.transform = 'translateY(-560px) scale(0.88)';
+    card.style.opacity = '0';
+    superLikedCars.push(saved);
+    likedCars.push(saved);
+    saveSuperLikes();
+    saveLikedCars();
+    setTimeout(() => showMatchCelebrate(saved, true), 50);
   }
   setTimeout(() => { swipeIndex++; renderSwipeDeck(); }, 360);
 }
 
 function swipeLeft()  { if (swipeIndex < swipeQueue.length) animateCardOut('left'); }
 function swipeRight() { if (swipeIndex < swipeQueue.length) animateCardOut('right'); }
+function swipeSuper() { if (swipeIndex < swipeQueue.length) animateCardOut('up'); }
 
 /* ── Toast ── */
 let toastTimer;

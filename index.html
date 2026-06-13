@@ -394,7 +394,17 @@
       </div>
 
       <!-- Panel 2: Swipe deck -->
-      <div id="matchDeck" style="display:none;flex-direction:column;height:100%;">
+      <div id="matchDeck" style="display:none;flex-direction:column;height:100%;position:relative;">
+
+        <!-- Match celebration overlay -->
+        <div class="match-celebrate" id="matchCelebrate" style="display:none;">
+          <div class="mc-particles" id="mcParticles"></div>
+          <div class="mc-icon" id="mcIcon">💛</div>
+          <div class="mc-label" id="mcLabel">SAVED</div>
+          <div class="mc-name" id="mcName"></div>
+          <div class="mc-sub" id="mcSub">Added to wishlist</div>
+        </div>
+
         <div class="match-deck-head">
           <button class="match-back-btn" onclick="backToPrefs()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
@@ -405,11 +415,14 @@
         <div class="swipe-area">
           <div class="swipe-deck" id="swipeDeck"></div>
         </div>
-        <div class="swipe-actions" id="swipeActions">
-          <button class="swipe-btn swipe-pass" onclick="swipeLeft()">
+        <div class="swipe-actions" id="swipeActions" style="display:none;">
+          <button class="swipe-act-btn swipe-act-pass" onclick="swipeLeft()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
-          <button class="swipe-btn swipe-like" onclick="swipeRight()">
+          <button class="swipe-act-btn swipe-act-super" onclick="swipeSuper()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </button>
+          <button class="swipe-act-btn swipe-act-like" onclick="swipeRight()">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           </button>
         </div>
