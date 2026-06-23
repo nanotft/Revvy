@@ -2325,7 +2325,7 @@ const MG_HI_KEY = 'revmatch_streetrush_hi';
 let mgRaf = null, mgCanvas, mgCtx, mgW, mgH;
 
 // Perspective constants — set in openMiniGame based on canvas size
-let MG_HRZ, MG_CAM, MG_RDHW;
+let MG_HRZ, MG_CAM, MG_RDHW, MG_DASH_Y;
 const MG_ROAD_HW = 1.0;   // road half-width in world units (-1 to 1)
 const MG_MAX_Z   = 270;   // maximum visible depth
 
@@ -2352,14 +2352,13 @@ const mg = {
 function mgLane(l) { return (l - 1) * MG_ROAD_HW * 0.66; }
 
 // Project world (x, z) → screen {x, y, s:scale}
+// sy is clamped to the windshield area: MG_HRZ (horizon) to MG_DASH_Y (dashboard top)
 function mgProject(worldX, worldZ) {
   if (worldZ < 0.5) return null;
-  // Vanishing point drifts with tilt for lean effect
-  const vpX = mgW / 2 + mg.tilt * mgW * 0.07;
+  const vpX = mgW / 2 + mg.tilt * mgW * 0.06;
   const s   = MG_CAM / worldZ;
   const sx  = vpX + (worldX - mg.playerX) * s * MG_RDHW;
-  // sy: approaches MG_HRZ as z→∞, approaches H as z→0
-  const sy  = MG_HRZ + (mgH - MG_HRZ) / (worldZ / MG_CAM + 1);
+  const sy  = MG_HRZ + (MG_DASH_Y - MG_HRZ) / (worldZ / MG_CAM + 1);
   return { x: sx, y: sy, s };
 }
 
@@ -2373,9 +2372,10 @@ function openMiniGame() {
   mgCanvas.width  = mgW;
   mgCanvas.height = mgH;
 
-  MG_HRZ  = mgH * 0.40;   // horizon y
-  MG_CAM  = 160;           // perspective focal length
-  MG_RDHW = mgW * 0.46;   // road half-width in px at distance MG_CAM
+  MG_HRZ  = mgH * 0.29;   // horizon y (sky/road split)
+  MG_CAM  = 150;           // perspective focal length
+  MG_RDHW = mgW * 0.48;   // road half-width in px at distance MG_CAM
+  MG_DASH_Y = mgH * 0.64; // top of dashboard (bottom of windshield)
 
   mg.hi = parseInt(localStorage.getItem(MG_HI_KEY) || '0');
   mgDoReset();
@@ -2571,24 +2571,29 @@ function mgBurst(x, y, color, n) {
 
 /* ── Render ── */
 function mgRender() {
-  const ctx = mgCtx, W = mgW, H = mgH, HRZ = MG_HRZ;
+  const ctx = mgCtx, W = mgW, H = mgH;
+  const HRZ = MG_HRZ, DASHY = MG_DASH_Y;
 
-  // Sky gradient
+  // ── Sky (above horizon) ──
   const skyG = ctx.createLinearGradient(0, 0, 0, HRZ);
-  skyG.addColorStop(0, '#050508');
-  skyG.addColorStop(1, '#111120');
+  skyG.addColorStop(0,   '#07080f');
+  skyG.addColorStop(0.5, '#0e1020');
+  skyG.addColorStop(1,   '#1a1e38');
   ctx.fillStyle = skyG;
   ctx.fillRect(0, 0, W, HRZ);
 
-  // Stars (fixed positions)
-  ctx.fillStyle = 'rgba(255,255,255,0.65)';
-  for (let i = 0; i < 28; i++) {
-    ctx.fillRect(((i*137+31) % (W-6)) + 3, ((i*97+17) % (HRZ-4)) + 2, 1, 1);
-  }
+  // Subtle far-horizon haze
+  const hazeG = ctx.createLinearGradient(0, HRZ - 18, 0, HRZ + 14);
+  hazeG.addColorStop(0, 'rgba(60,70,180,0)');
+  hazeG.addColorStop(0.5,'rgba(60,70,180,0.14)');
+  hazeG.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = hazeG;
+  ctx.fillRect(0, HRZ - 18, W, 32);
 
-  mgDrawRoad(ctx, W, H, HRZ);
+  // ── Road + traffic (windshield area HRZ → DASHY) ──
+  mgDrawRoad(ctx, W, H, HRZ, DASHY);
 
-  // All objects sorted far → near (far drawn first, near on top)
+  // Sort objects far → near
   const allObjs = [
     ...mg.cars.map(c    => ({ ...c,  _k:'car'    })),
     ...mg.pickups.map(p => ({ ...p,  _k:'pickup' })),
@@ -2601,67 +2606,121 @@ function mgRender() {
     else                   mgDraw3DPickup(ctx, pt.x, pt.y, pt.s, o.type);
   });
 
-  // Particles
+  // Particles (windshield area)
   mg.particles.forEach(p => {
+    if (p.y < HRZ || p.y > DASHY) return;
     ctx.globalAlpha = Math.max(0, p.life / 40);
     ctx.fillStyle   = p.color;
     ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI*2); ctx.fill();
   });
   ctx.globalAlpha = 1;
 
-  // Speed lines (nitro / high speed)
-  if (mg.nitroActive || mg.speed > 140) mgDrawSpeedLines(ctx, W, H, HRZ);
-
-  // Player car hood
-  mgDrawHood(ctx, W, H, HRZ);
-
-  // Hit flash
-  if (mg.flash > 0) {
-    ctx.fillStyle = `rgba(255,44,0,${mg.flash / 22 * 0.40})`;
-    ctx.fillRect(0, 0, W, H);
+  // Nitro speed lines inside windshield
+  if (mg.nitroActive || mg.speed > 145) {
+    const cx = W/2, cy = (HRZ + DASHY) / 2;
+    const intensity = mg.nitroActive ? 0.32 : 0.15;
+    ctx.save(); ctx.globalAlpha = intensity;
+    ctx.strokeStyle = mg.nitroActive ? '#e8ff3d' : '#fff';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 18; i++) {
+      const a = (i/18)*Math.PI*2;
+      const r0 = 8, r1 = 40 + Math.random() * (Math.min(W,DASHY-HRZ)*0.38);
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a)*r0, cy + Math.sin(a)*r0);
+      ctx.lineTo(cx + Math.cos(a)*r1, cy + Math.sin(a)*r1);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
-  mgDrawHUD(ctx, W, H, HRZ);
+  // Hit flash (windshield only)
+  if (mg.flash > 0) {
+    ctx.fillStyle = `rgba(255,44,0,${mg.flash / 22 * 0.42})`;
+    ctx.fillRect(0, HRZ, W, DASHY - HRZ);
+  }
+
+  // Windshield HUD overlay (distance, near-miss)
+  mgDrawWindshieldHUD(ctx, W, HRZ, DASHY);
+
+  // ── Cockpit (dashboard + steering wheel + A-pillars) ──
+  mgDrawCockpit(ctx, W, H, HRZ, DASHY);
+
   if (mg.state === 'start') mgDrawStart(ctx, W, H);
   if (mg.state === 'over')  mgDrawOver(ctx, W, H);
 }
 
 /* Draw pseudo-3D perspective road */
-function mgDrawRoad(ctx, W, H, HRZ) {
-  // Vanishing point (shifts with steering tilt)
+function mgDrawRoad(ctx, W, H, HRZ, DASHY) {
   const vpX = W/2 + mg.tilt * W * 0.07;
 
-  // Grass verges
-  ctx.fillStyle = '#0c150c';
-  ctx.fillRect(0, HRZ, W, H - HRZ);
-
-  // Road surface (trapezoid converging to vanishing point)
-  const roadBHW = MG_RDHW * 1.18;  // road half-width at bottom of screen
-  const rg = ctx.createLinearGradient(0, HRZ, 0, H);
-  rg.addColorStop(0, '#1a1a22');
-  rg.addColorStop(1, '#28283a');
-  ctx.fillStyle = rg;
+  // Fill grass below windshield bottom edge (between DASHY and H is cockpit, handled elsewhere)
+  // The road occupies HRZ → DASHY (windshield area)
+  ctx.fillStyle = '#09110a';
   ctx.beginPath();
-  ctx.moveTo(vpX,          HRZ);
-  ctx.lineTo(vpX,          HRZ);
-  ctx.lineTo(W/2 + roadBHW, H);
-  ctx.lineTo(W/2 - roadBHW, H);
+  ctx.moveTo(0,    HRZ);
+  ctx.lineTo(W,    HRZ);
+  ctx.lineTo(W,    DASHY);
+  ctx.lineTo(0,    DASHY);
   ctx.closePath();
   ctx.fill();
 
-  // Road edge lines
-  const edgeXs = [-MG_ROAD_HW, MG_ROAD_HW];
-  edgeXs.forEach(lx => {
+  // Road trapezoid: horizon-wide at top, wide at bottom of windshield
+  const roadBHW = MG_RDHW * 1.28;
+  const rg = ctx.createLinearGradient(0, HRZ, 0, DASHY);
+  rg.addColorStop(0,   '#16161e');
+  rg.addColorStop(0.6, '#202030');
+  rg.addColorStop(1,   '#2a2a3c');
+  ctx.fillStyle = rg;
+  ctx.beginPath();
+  ctx.moveTo(vpX,             HRZ);
+  ctx.lineTo(vpX,             HRZ);
+  ctx.lineTo(W/2 + roadBHW,  DASHY);
+  ctx.lineTo(W/2 - roadBHW,  DASHY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Asphalt texture via subtle random dots (seeded by scrollZ bucket)
+  ctx.save();
+  ctx.globalAlpha = 0.045;
+  ctx.fillStyle = '#fff';
+  const bucket = Math.floor(mg.scrollZ / 3);
+  for (let i = 0; i < 28; i++) {
+    const frac = ((bucket * 37 + i * 53) % 100) / 100;
+    const z = 4 + frac * (MG_MAX_Z - 4);
+    const px = mgProject(((i % 5) - 2) * 0.28, z);
+    if (px && px.y >= HRZ && px.y <= DASHY) {
+      ctx.beginPath(); ctx.arc(px.x, px.y, Math.max(0.5, px.s * 3), 0, Math.PI*2); ctx.fill();
+    }
+  }
+  ctx.restore();
+
+  // Grass verges left/right of road
+  const gL = mgProject(-MG_ROAD_HW * 1.01, 2);
+  const gLF = mgProject(-MG_ROAD_HW * 1.01, MG_MAX_Z);
+  const gR = mgProject( MG_ROAD_HW * 1.01, 2);
+  const gRF = mgProject( MG_ROAD_HW * 1.01, MG_MAX_Z);
+  if (gL && gLF && gR && gRF) {
+    ctx.fillStyle = '#09110a';
+    ctx.beginPath();
+    ctx.moveTo(0, HRZ); ctx.lineTo(gLF.x, gLF.y); ctx.lineTo(gL.x, gL.y); ctx.lineTo(0, DASHY);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(W, HRZ); ctx.lineTo(gRF.x, gRF.y); ctx.lineTo(gR.x, gR.y); ctx.lineTo(W, DASHY);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // Road edge white lines
+  [-MG_ROAD_HW, MG_ROAD_HW].forEach(lx => {
     const pN = mgProject(lx, 2);
     const pF = mgProject(lx, MG_MAX_Z);
     if (!pN || !pF) return;
-    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
     ctx.lineWidth   = 2.5;
     ctx.beginPath(); ctx.moveTo(pN.x, pN.y); ctx.lineTo(pF.x, pF.y); ctx.stroke();
   });
 
   // Lane dividers (dashed, scrolling)
-  const divXs = [-MG_ROAD_HW/3, MG_ROAD_HW/3];
+  const divXs = [-MG_ROAD_HW / 3, MG_ROAD_HW / 3];
   const dashSpacing = 28, dashLen = 13;
   divXs.forEach(lx => {
     for (let base = mg.scrollZ % dashSpacing; base < MG_MAX_Z; base += dashSpacing) {
@@ -2670,78 +2729,103 @@ function mgDrawRoad(ctx, W, H, HRZ) {
       if (z1 < 1) continue;
       const p0 = mgProject(lx, z0);
       const p1 = mgProject(lx, z1);
-      if (!p0 || !p1 || p0.y < HRZ || p1.y > H + 4) continue;
-      const alpha = 0.15 + 0.22 * (1 - z0 / MG_MAX_Z);
+      if (!p0 || !p1 || p0.y < HRZ || p1.y > DASHY + 4) continue;
+      const alpha = 0.16 + 0.22 * (1 - z0 / MG_MAX_Z);
       ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
       ctx.lineWidth   = Math.max(1, p0.s * 7);
       ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
     }
   });
 
-  // Horizon glow line
-  const hg = ctx.createLinearGradient(0, HRZ - 6, 0, HRZ + 10);
-  hg.addColorStop(0,   'rgba(80,90,200,0.0)');
-  hg.addColorStop(0.5, 'rgba(70,80,180,0.18)');
+  // Horizon glow at HRZ boundary
+  const hg = ctx.createLinearGradient(0, HRZ - 4, 0, HRZ + 8);
+  hg.addColorStop(0,   'rgba(70,80,200,0.0)');
+  hg.addColorStop(0.5, 'rgba(60,70,190,0.16)');
   hg.addColorStop(1,   'rgba(0,0,0,0.0)');
   ctx.fillStyle = hg;
-  ctx.fillRect(0, HRZ - 6, W, 16);
+  ctx.fillRect(0, HRZ - 4, W, 12);
 }
 
-/* Draw a traffic car projected in 3-D perspective */
+/* Draw a traffic car from behind — same-direction traffic, you see rear/taillights */
 function mgDraw3DCar(ctx, sx, sy, scale, type) {
-  const cw = Math.max(5, scale * 108);  // screen width
-  const ch = cw * 1.32;                 // screen height
+  const cw = Math.max(5, scale * 110);
+  const ch = cw * 1.28;
   const hw = cw / 2;
 
-  // Palette: oncoming cars (you see their FRONT — headlights face you)
   const cols = {
-    cop:   { body:'#1a3cdd', dark:'#102090' },
-    sedan: { body:'#c03030', dark:'#802020' },
-    suv:   { body:'#2a3c58', dark:'#1a2840' },
-    sports:{ body:'#e03600', dark:'#902200' },
+    cop:   { body:'#1a2e99', roof:'#10207a', trunk:'#0e1a60' },
+    sedan: { body:'#c82828', roof:'#7a1818', trunk:'#9a2020' },
+    suv:   { body:'#253548', roof:'#16202e', trunk:'#1c2a3a' },
+    sports:{ body:'#d83200', roof:'#8a1e00', trunk:'#b02800' },
   };
   const c = cols[type] || cols.sedan;
 
   ctx.save();
-  ctx.translate(sx, sy);   // sy = road surface at that depth (bottom of car)
+  ctx.translate(sx, sy);  // sy = bottom of car on road surface
 
-  // Road shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.22)';
-  ctx.beginPath(); ctx.ellipse(0, -1, hw * 0.85, cw * 0.10, 0, 0, Math.PI*2); ctx.fill();
+  // Ground shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.beginPath(); ctx.ellipse(0, -2, hw * 0.9, cw * 0.09, 0, 0, Math.PI*2); ctx.fill();
 
   // Car body
-  ctx.shadowBlur = cw * 0.12; ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowOffsetY = cw * 0.06;
+  ctx.shadowBlur = cw * 0.15; ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowOffsetY = cw * 0.05;
   ctx.fillStyle = c.body;
-  ctx.beginPath(); ctx.roundRect(-hw, -ch, cw, ch, cw * 0.10); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(-hw, -ch, cw, ch, cw * 0.09); ctx.fill();
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
-  // Roof (darker overlay on upper portion)
-  ctx.fillStyle = 'rgba(0,0,0,0.28)';
-  ctx.beginPath(); ctx.roundRect(-hw * 0.68, -ch * 0.92, hw * 1.36, ch * 0.46, cw * 0.07); ctx.fill();
+  // Trunk / lower rear panel (bottom portion, slightly lighter)
+  const tg = ctx.createLinearGradient(0, -ch * 0.35, 0, 0);
+  tg.addColorStop(0, c.trunk);
+  tg.addColorStop(1, 'rgba(0,0,0,0.18)');
+  ctx.fillStyle = tg;
+  ctx.beginPath(); ctx.roundRect(-hw * 0.94, -ch * 0.35, hw * 1.88, ch * 0.35, cw * 0.05); ctx.fill();
 
-  // Front windshield (BOTTOM of car — faces player for oncoming)
-  ctx.fillStyle = 'rgba(100,140,220,0.32)';
-  ctx.beginPath(); ctx.roundRect(-hw * 0.54, -ch * 0.44, hw * 1.08, ch * 0.17, cw * 0.05); ctx.fill();
+  // Roof section
+  ctx.fillStyle = c.roof;
+  ctx.beginPath(); ctx.roundRect(-hw * 0.7, -ch * 0.98, hw * 1.4, ch * 0.44, cw * 0.07); ctx.fill();
 
-  // Rear window (top)
-  ctx.fillStyle = 'rgba(70,90,160,0.28)';
-  ctx.beginPath(); ctx.roundRect(-hw * 0.50, -ch * 0.93, hw, ch * 0.14, cw * 0.05); ctx.fill();
+  // Rear window (below roof, upper body)
+  ctx.fillStyle = 'rgba(60,80,130,0.55)';
+  ctx.beginPath(); ctx.roundRect(-hw * 0.56, -ch * 0.88, hw * 1.12, ch * 0.28, cw * 0.05); ctx.fill();
+  // Window glare highlight
+  ctx.fillStyle = 'rgba(180,200,255,0.11)';
+  ctx.beginPath(); ctx.roundRect(-hw * 0.50, -ch * 0.86, hw * 0.55, ch * 0.09, cw * 0.03); ctx.fill();
 
-  // Headlights (front = bottom, facing player)
-  ctx.fillStyle = '#fff';
-  ctx.shadowBlur = hw * 0.5; ctx.shadowColor = 'rgba(255,245,180,0.95)';
-  ctx.beginPath(); ctx.ellipse(-hw * 0.28, -ch * 0.13, hw * 0.13, ch * 0.055, 0, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse( hw * 0.28, -ch * 0.13, hw * 0.13, ch * 0.055, 0, 0, Math.PI*2); ctx.fill();
+  // Rear bumper crease
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+  ctx.lineWidth = Math.max(0.8, cw * 0.025);
+  ctx.beginPath(); ctx.moveTo(-hw * 0.9, -ch * 0.12); ctx.lineTo(hw * 0.9, -ch * 0.12); ctx.stroke();
+
+  // Taillights — red horizontal strips near bottom corners
+  const tlW = hw * 0.26, tlH = ch * 0.07, tlY = -ch * 0.24;
+  const tlGlow = Math.sin(Date.now() / 600) * 0.08 + 0.92;
+  ctx.shadowBlur = hw * 0.45; ctx.shadowColor = `rgba(255,0,0,${tlGlow})`;
+  ctx.fillStyle = `rgba(255,20,20,${tlGlow})`;
+  ctx.beginPath(); ctx.roundRect(-hw * 0.88, tlY, tlW, tlH, cw * 0.03); ctx.fill();
+  ctx.beginPath(); ctx.roundRect( hw * 0.62, tlY, tlW, tlH, cw * 0.03); ctx.fill();
+
+  // Brake light inner bright
   ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(255,140,140,0.55)';
+  ctx.beginPath(); ctx.roundRect(-hw * 0.84, tlY + tlH * 0.2, tlW * 0.55, tlH * 0.55, cw * 0.02); ctx.fill();
+  ctx.beginPath(); ctx.roundRect( hw * 0.66, tlY + tlH * 0.2, tlW * 0.55, tlH * 0.55, cw * 0.02); ctx.fill();
+
+  // Reverse/center stop light (narrow strip)
+  ctx.fillStyle = 'rgba(255,30,30,0.55)';
+  ctx.beginPath(); ctx.roundRect(-hw * 0.18, tlY, hw * 0.36, tlH * 0.55, 2); ctx.fill();
+
+  // License plate
+  ctx.fillStyle = '#e8e8d0';
+  ctx.beginPath(); ctx.roundRect(-hw * 0.22, -ch * 0.11, hw * 0.44, ch * 0.065, 2); ctx.fill();
 
   // Cop lightbar
   if (type === 'cop') {
-    const t = Math.floor(Date.now() / 140) % 2;
-    ctx.shadowBlur = hw * 0.55;
-    ctx.fillStyle  = t ? '#ff0000' : '#0000ff'; ctx.shadowColor = ctx.fillStyle;
-    ctx.fillRect(-hw * 0.34, -ch * 1.055, hw * 0.3, ch * 0.045);
-    ctx.fillStyle  = t ? '#0000ff' : '#ff0000'; ctx.shadowColor = ctx.fillStyle;
-    ctx.fillRect( hw * 0.04, -ch * 1.055, hw * 0.3, ch * 0.045);
+    const t = Math.floor(Date.now() / 130) % 2;
+    ctx.shadowBlur = hw * 0.6;
+    ctx.fillStyle  = t ? '#ff1111' : '#1111ff'; ctx.shadowColor = ctx.fillStyle;
+    ctx.fillRect(-hw * 0.36, -ch * 1.055, hw * 0.3,  ch * 0.042);
+    ctx.fillStyle  = t ? '#1111ff' : '#ff1111'; ctx.shadowColor = ctx.fillStyle;
+    ctx.fillRect( hw * 0.06, -ch * 1.055, hw * 0.3,  ch * 0.042);
     ctx.shadowBlur = 0;
   }
 
@@ -2771,175 +2855,265 @@ function mgDraw3DPickup(ctx, sx, sy, scale, type) {
   ctx.restore();
 }
 
-/* Player car hood — the bonnet you see from inside the cockpit */
-function mgDrawHood(ctx, W, H, HRZ) {
-  const hoodTopY = H * 0.74;           // where hood enters bottom of view
-  const hoodTopW = W * 0.30;           // narrow at top (perspective)
-  const hoodBotW = W * 0.84;           // wide at the very bottom
-  const cx = W / 2 - mg.tilt * W * 0.025;  // slight lateral offset with steering
+/* Circular gauge helper (arc from bottom-left to bottom-right, fills with value) */
+function mgDrawGauge(ctx, cx, cy, r, value, color, label, readout) {
+  const startA = Math.PI * 0.75;   // 135°
+  const endA   = Math.PI * 2.25;   // 405°  (270° sweep)
+  const fillA  = startA + (endA - startA) * Math.min(1, Math.max(0, value));
 
-  // Hood surface
-  const hg = ctx.createLinearGradient(0, hoodTopY, 0, H);
-  hg.addColorStop(0,   '#9aad00');
-  hg.addColorStop(0.3, '#c8d800');
-  hg.addColorStop(0.8, '#7a8c00');
-  hg.addColorStop(1,   '#3a4200');
-  ctx.fillStyle = hg;
-  ctx.beginPath();
-  ctx.moveTo(cx - hoodTopW/2, hoodTopY);
-  ctx.lineTo(cx + hoodTopW/2, hoodTopY);
-  ctx.lineTo(cx + hoodBotW/2, H);
-  ctx.lineTo(cx - hoodBotW/2, H);
-  ctx.closePath();
-  ctx.fill();
+  // Track
+  ctx.beginPath(); ctx.arc(cx, cy, r, startA, endA);
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = Math.max(2.5, r * 0.18);
+  ctx.lineCap = 'round'; ctx.stroke();
 
-  // Center ridge
-  ctx.strokeStyle = 'rgba(232,255,61,0.45)';
-  ctx.lineWidth   = 1.5;
-  ctx.beginPath(); ctx.moveTo(cx, hoodTopY + 4); ctx.lineTo(cx, H); ctx.stroke();
+  // Fill
+  ctx.beginPath(); ctx.arc(cx, cy, r, startA, fillA);
+  ctx.strokeStyle = color;
+  ctx.shadowBlur  = value > 0.75 ? 8 : 0; ctx.shadowColor = color;
+  ctx.stroke();
+  ctx.shadowBlur = 0; ctx.lineCap = 'butt';
 
-  // Side creases
-  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-  ctx.lineWidth   = 1;
-  ctx.beginPath(); ctx.moveTo(cx - hoodTopW * 0.28, hoodTopY + 6); ctx.lineTo(cx - hoodBotW * 0.30, H); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx + hoodTopW * 0.28, hoodTopY + 6); ctx.lineTo(cx + hoodBotW * 0.30, H); ctx.stroke();
-
-  // A-pillars (windshield frame edges)
-  ctx.fillStyle = '#111';
-  ctx.beginPath();
-  ctx.moveTo(0, H * 0.64);
-  ctx.lineTo(cx - hoodTopW / 2, hoodTopY);
-  ctx.lineTo(cx - hoodTopW / 2 - 14, hoodTopY);
-  ctx.lineTo(0, H * 0.64 + 10);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(W, H * 0.64);
-  ctx.lineTo(cx + hoodTopW / 2, hoodTopY);
-  ctx.lineTo(cx + hoodTopW / 2 + 14, hoodTopY);
-  ctx.lineTo(W, H * 0.64 + 10);
-  ctx.fill();
-
-  // Dashboard strip
-  ctx.fillStyle = '#0c0c0c';
-  ctx.fillRect(0, H - 28, W, 28);
-
-  // Speedo readout
-  const kph = Math.round(mg.speed + (mg.nitroActive ? 95 : 0));
-  ctx.fillStyle   = mg.nitroActive ? '#e8ff3d' : 'rgba(232,255,61,0.75)';
-  ctx.font        = 'bold 13px "DM Mono", monospace';
-  ctx.textAlign   = 'center';
-  ctx.textBaseline = 'middle';
-  if (mg.nitroActive) { ctx.shadowBlur = 8; ctx.shadowColor = '#e8ff3d'; }
-  ctx.fillText(kph + ' km/h', W/2, H - 14);
-  ctx.shadowBlur = 0;
-}
-
-/* Radial speed lines for nitro / high speed */
-function mgDrawSpeedLines(ctx, W, H, HRZ) {
-  const cx = W/2, cy = HRZ + (H - HRZ) * 0.42;
-  const intensity = Math.min(0.38, 0.18 + (mg.nitroActive ? 0.22 : 0));
-  ctx.save();
-  ctx.globalAlpha = intensity;
-  ctx.strokeStyle = mg.nitroActive ? '#e8ff3d' : '#fff';
-  ctx.lineWidth   = 1;
-  for (let i = 0; i < 20; i++) {
-    const a   = (i / 20) * Math.PI * 2;
-    const r0  = 10 + Math.random() * 5;
-    const r1  = 55 + Math.random() * Math.min(W, H - HRZ) * 0.44;
+  // Tick marks
+  for (let i = 0; i <= 8; i++) {
+    const a = startA + (endA - startA) * (i / 8);
+    const inner = r * 0.72, outer = r * 0.88;
+    ctx.strokeStyle = i <= Math.round(value * 8) ? color : 'rgba(255,255,255,0.15)';
+    ctx.lineWidth   = i % 4 === 0 ? 2 : 1;
     ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
-    ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+    ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+    ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
     ctx.stroke();
   }
-  ctx.restore();
+
+  // Readout value
+  ctx.fillStyle    = value > 0.85 ? color : 'rgba(255,255,255,0.9)';
+  ctx.font         = `bold ${Math.max(8, r * 0.46)}px "DM Mono", monospace`;
+  ctx.textAlign    = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(readout, cx, cy - r * 0.05);
+
+  // Label
+  ctx.fillStyle    = 'rgba(255,255,255,0.35)';
+  ctx.font         = `${Math.max(6, r * 0.28)}px "DM Mono", monospace`;
+  ctx.fillText(label, cx, cy + r * 0.40);
 }
 
-/* HUD overlay */
-function mgDrawHUD(ctx, W, H, HRZ) {
-  // Top bar
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  ctx.fillRect(0, 0, W, 56);
+/* Windshield-area HUD overlay (distance, score, streak — inside the glass) */
+function mgDrawWindshieldHUD(ctx, W, HRZ, DASHY) {
+  // Tinted top bar inside windshield
+  const barH = Math.min(52, (DASHY - HRZ) * 0.18);
+  ctx.fillStyle = 'rgba(0,0,0,0.50)';
+  ctx.fillRect(0, HRZ, W, barH);
 
   ctx.save();
   ctx.textBaseline = 'middle';
 
-  // Distance
-  ctx.fillStyle   = '#e8ff3d';
-  ctx.font        = 'bold 15px "DM Mono", monospace';
-  ctx.textAlign   = 'left';
-  ctx.fillText(String(Math.floor(mg.dist)).padStart(5, '0') + ' m', 14, 21);
+  // Distance odometer
+  ctx.fillStyle = '#e8ff3d';
+  ctx.font      = `bold 14px "DM Mono", monospace`;
+  ctx.textAlign = 'left';
+  ctx.fillText(String(Math.floor(mg.dist)).padStart(5, '0') + ' m', 12, HRZ + barH * 0.38);
 
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.font      = '10px "DM Mono", monospace';
-  ctx.fillText('SCORE  ' + mg.score, 14, 40);
+  ctx.fillStyle = 'rgba(255,255,255,0.38)';
+  ctx.font      = '9px "DM Mono", monospace';
+  ctx.fillText('SCORE  ' + mg.score, 12, HRZ + barH * 0.75);
 
-  // Best (center top)
+  // Best (center)
   ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(255,255,255,0.26)';
-  ctx.font      = '10px "DM Mono", monospace';
-  ctx.fillText('BEST ' + mg.hi, W/2, 28);
+  ctx.fillStyle = 'rgba(255,255,255,0.24)';
+  ctx.font      = '9px "DM Mono", monospace';
+  ctx.fillText('BEST ' + mg.hi, W / 2, HRZ + barH * 0.55);
 
   // Lives (right)
   let hearts = '';
   for (let i = 0; i < 3; i++) hearts += i < mg.lives ? '❤️' : '🖤';
   ctx.textAlign = 'right';
-  ctx.font      = '15px sans-serif';
-  ctx.fillText(hearts, W - 10, 21);
+  ctx.font      = '14px sans-serif';
+  ctx.fillText(hearts, W - 10, HRZ + barH * 0.38);
 
   ctx.restore();
 
-  // Nitro bar (above dashboard)
-  if (mg.nitro > 0 || mg.nitroActive) {
-    const bx = W/2 - 62, by = H - 56, bw = 124, bh = 10;
-    ctx.fillStyle = 'rgba(0,0,0,0.52)';
-    ctx.beginPath(); ctx.roundRect(bx - 2, by - 2, bw + 4, bh + 4, 7); ctx.fill();
-    const pct = Math.max(0, mg.nitro / 200);
-    const grd = ctx.createLinearGradient(bx, 0, bx + bw, 0);
-    grd.addColorStop(0, '#ff7700'); grd.addColorStop(1, '#e8ff3d');
-    ctx.fillStyle = grd;
-    ctx.shadowBlur = 8; ctx.shadowColor = '#e8ff3d';
-    ctx.beginPath(); ctx.roundRect(bx, by, bw * pct, bh, 5); ctx.fill();
-    ctx.shadowBlur = 0;
-
-    ctx.fillStyle    = '#e8ff3d';
-    ctx.textAlign    = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font         = 'bold 9px "DM Mono", monospace';
-    ctx.fillText('⚡ NITRO', W/2, H - 68);
-
-    if (mg.nitroActive && mg.frame % 8 < 5) {
-      ctx.shadowBlur = 12; ctx.shadowColor = '#e8ff3d';
-      ctx.font       = 'bold 16px "Bebas Neue", cursive';
-      ctx.fillText('NITRO BOOST', W/2, H - 82);
-      ctx.shadowBlur = 0;
-    }
-  }
-
-  // Near-miss streak (bottom-left)
+  // Near-miss streak label (lower windshield)
   if (mg.streaks.near >= 2) {
     ctx.save();
-    ctx.textAlign    = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.shadowBlur   = 6; ctx.shadowColor = '#e8ff3d';
-    ctx.fillStyle    = '#e8ff3d';
-    const fs = Math.min(20, 11 + mg.streaks.near * 1.5);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.shadowBlur = 6; ctx.shadowColor = '#e8ff3d';
+    const fs = Math.min(19, 11 + mg.streaks.near * 1.4);
+    ctx.fillStyle = '#e8ff3d';
     ctx.font = `bold ${fs}px "DM Sans", sans-serif`;
-    ctx.fillText('CLOSE ×' + mg.streaks.near, 14, H - 64);
+    ctx.fillText('CLOSE ×' + mg.streaks.near, 12, DASHY - 28);
     ctx.shadowBlur = 0;
-    ctx.fillStyle  = 'rgba(255,255,255,0.38)';
-    ctx.font       = '9px "DM Mono", monospace';
-    ctx.fillText('NEAR MISS', 14, H - 48);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = '9px "DM Mono", monospace';
+    ctx.fillText('NEAR MISS', 12, DASHY - 14);
     ctx.restore();
   }
 
-  // Hold-to-steer hint (first 4 sec)
+  // Steer hint (first 4 sec)
   if (mg.frame > 0 && mg.frame < 120) {
-    ctx.fillStyle    = `rgba(255,255,255,${0.55 * (1 - mg.frame / 120)})`;
-    ctx.font         = '11px "DM Mono", monospace';
+    ctx.fillStyle    = `rgba(255,255,255,${0.52 * (1 - mg.frame / 120)})`;
+    ctx.font         = '10px "DM Mono", monospace';
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('HOLD LEFT / RIGHT TO STEER', W/2, HRZ + (H - HRZ) * 0.90);
+    ctx.fillText('HOLD LEFT / RIGHT TO STEER', W / 2, HRZ + (DASHY - HRZ) * 0.88);
   }
+}
+
+/* ── Full cockpit: dashboard, gauges, steering wheel, A-pillars ── */
+function mgDrawCockpit(ctx, W, H, HRZ, DASHY) {
+  const tilt = mg.tilt;
+
+  // ── A-pillars (diagonal bars framing the windshield) ──
+  const pillarW = W * 0.072;
+  ctx.fillStyle = '#111216';
+  // Left A-pillar: top-left corner → inner windshield edge at DASHY
+  ctx.beginPath();
+  ctx.moveTo(0,           HRZ);
+  ctx.lineTo(pillarW * 1.6, HRZ);
+  ctx.lineTo(pillarW,      DASHY);
+  ctx.lineTo(0,           DASHY);
+  ctx.closePath(); ctx.fill();
+  // Right A-pillar
+  ctx.beginPath();
+  ctx.moveTo(W,               HRZ);
+  ctx.lineTo(W - pillarW * 1.6, HRZ);
+  ctx.lineTo(W - pillarW,      DASHY);
+  ctx.lineTo(W,               DASHY);
+  ctx.closePath(); ctx.fill();
+
+  // Pillar highlight bead
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth   = 2;
+  ctx.beginPath(); ctx.moveTo(pillarW * 1.55, HRZ); ctx.lineTo(pillarW * 0.92, DASHY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W - pillarW * 1.55, HRZ); ctx.lineTo(W - pillarW * 0.92, DASHY); ctx.stroke();
+
+  // Windshield frame top bar
+  ctx.fillStyle = '#111216';
+  ctx.fillRect(0, HRZ, W, HRZ * 0.04);
+
+  // ── Dashboard body (DASHY → H) ──
+  const dashH = H - DASHY;
+  const dg = ctx.createLinearGradient(0, DASHY, 0, H);
+  dg.addColorStop(0,   '#1a1b22');
+  dg.addColorStop(0.18,'#141518');
+  dg.addColorStop(1,   '#0c0c10');
+  ctx.fillStyle = dg;
+  ctx.fillRect(0, DASHY, W, dashH);
+
+  // Dashboard top edge highlight
+  const edgeG = ctx.createLinearGradient(0, DASHY, 0, DASHY + 3);
+  edgeG.addColorStop(0, 'rgba(255,255,255,0.13)');
+  edgeG.addColorStop(1, 'rgba(255,255,255,0.0)');
+  ctx.fillStyle = edgeG;
+  ctx.fillRect(0, DASHY, W, 3);
+
+  // Carbon-fiber texture rows
+  ctx.save();
+  ctx.globalAlpha = 0.055;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth   = 0.5;
+  for (let y = DASHY + 6; y < H; y += 7) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Horizontal accent trim line
+  ctx.strokeStyle = 'rgba(232,255,61,0.18)';
+  ctx.lineWidth   = 1;
+  ctx.beginPath(); ctx.moveTo(0, DASHY + dashH * 0.22); ctx.lineTo(W, DASHY + dashH * 0.22); ctx.stroke();
+
+  // ── Gauges ──
+  const gaugeR = Math.min(dashH * 0.36, W * 0.092);
+  const gaugeCY = DASHY + dashH * 0.54;
+
+  // Speedometer (left)
+  const speedGaugeX = W * 0.20;
+  mgDrawGauge(ctx, speedGaugeX, gaugeCY, gaugeR,
+    Math.min(1, (mg.speed - 60) / 200),
+    '#40c0ff', 'km/h',
+    Math.round(mg.speed + (mg.nitroActive ? 90 : 0)));
+
+  // Tachometer (right)
+  const tachGaugeX = W * 0.80;
+  const rpmVal = Math.min(1, 0.38 + (mg.speed - 60) / 260 + (mg.nitroActive ? 0.28 : 0));
+  mgDrawGauge(ctx, tachGaugeX, gaugeCY, gaugeR,
+    rpmVal,
+    mg.nitroActive ? '#e8ff3d' : '#ff5533', 'RPM',
+    Math.round(rpmVal * 8));
+
+  // Nitro bar (center, between gauges)
+  if (mg.nitro > 0 || mg.nitroActive) {
+    const bx = W * 0.38, by = DASHY + dashH * 0.26, bw = W * 0.24, bh = Math.max(5, dashH * 0.085);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.beginPath(); ctx.roundRect(bx - 2, by - 2, bw + 4, bh + 4, 6); ctx.fill();
+    const pct = Math.max(0, mg.nitro / 200);
+    const ng  = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+    ng.addColorStop(0, '#ff7700'); ng.addColorStop(1, '#e8ff3d');
+    ctx.fillStyle = ng;
+    if (mg.nitroActive) { ctx.shadowBlur = 8; ctx.shadowColor = '#e8ff3d'; }
+    ctx.beginPath(); ctx.roundRect(bx, by, bw * pct, bh, 4); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle    = mg.nitroActive ? '#e8ff3d' : 'rgba(232,255,61,0.5)';
+    ctx.font         = `bold ${Math.max(8, dashH * 0.09)}px "DM Mono", monospace`;
+    ctx.textAlign    = 'center'; ctx.textBaseline = 'middle';
+    if (mg.nitroActive && mg.frame % 8 < 5) {
+      ctx.shadowBlur = 12; ctx.shadowColor = '#e8ff3d';
+      ctx.fillText('⚡ NITRO BOOST', W/2, by - dashH * 0.12);
+      ctx.shadowBlur = 0;
+    } else {
+      ctx.fillText('⚡ NITRO', W/2, by - dashH * 0.10);
+    }
+  }
+
+  // ── Steering wheel ──
+  const swCX = W / 2;
+  const swCY = DASHY + dashH * 0.82;
+  const swR  = Math.min(dashH * 0.52, W * 0.14);
+  const swAngle = tilt * 0.55;  // rotate with steering input
+
+  ctx.save();
+  ctx.translate(swCX, swCY);
+  ctx.rotate(swAngle);
+
+  // Outer rim
+  ctx.beginPath(); ctx.arc(0, 0, swR, 0, Math.PI*2);
+  const rimG = ctx.createRadialGradient(0, -swR * 0.3, 0, 0, 0, swR);
+  rimG.addColorStop(0,   '#3a3a4a');
+  rimG.addColorStop(0.6, '#222230');
+  rimG.addColorStop(1,   '#18181e');
+  ctx.strokeStyle = rimG;
+  ctx.lineWidth   = Math.max(4, swR * 0.19);
+  ctx.stroke();
+
+  // Rim highlight
+  ctx.beginPath(); ctx.arc(0, -swR * 0.05, swR, -Math.PI * 0.82, -Math.PI * 0.18);
+  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  ctx.lineWidth   = Math.max(2, swR * 0.10);
+  ctx.stroke();
+
+  // Spokes (3-spoke layout)
+  ctx.strokeStyle = '#282832';
+  ctx.lineWidth   = Math.max(3, swR * 0.13);
+  ctx.lineCap     = 'round';
+  [-0.5, 0.5, 1.0].forEach(angleFrac => {
+    const a = angleFrac * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * swR * 0.15, Math.sin(a) * swR * 0.15);
+    ctx.lineTo(Math.cos(a) * swR * 0.88, Math.sin(a) * swR * 0.88);
+    ctx.stroke();
+  });
+  ctx.lineCap = 'butt';
+
+  // Center hub
+  ctx.beginPath(); ctx.arc(0, 0, swR * 0.18, 0, Math.PI*2);
+  ctx.fillStyle = '#1a1a24'; ctx.fill();
+  ctx.strokeStyle = '#303040'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Center logo dot
+  ctx.beginPath(); ctx.arc(0, 0, swR * 0.06, 0, Math.PI*2);
+  ctx.fillStyle = '#e8ff3d'; ctx.fill();
+
+  ctx.restore();
 }
 
 /* Start screen */
