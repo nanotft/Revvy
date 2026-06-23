@@ -2074,3 +2074,96 @@
 [data-theme="light"] .forum-thread { background: #fff; }
 [data-theme="light"] .forum-op { background: #fff; }
 [data-theme="light"] .speed-board-list .speed-entry { background: #fff; }
+
+/* ━━ Feed Game Banner ━━ */
+.feed-game-banner {
+  margin: 10px 14px 0;
+  background: linear-gradient(135deg, #161f00 0%, #0d1600 65%, #060a00 100%);
+  border: 1px solid rgba(232,255,61,0.22);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.feed-game-banner::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 0; bottom: 0; width: 70px;
+  background: linear-gradient(90deg, transparent, rgba(232,255,61,0.07));
+  pointer-events: none;
+}
+.feed-game-banner-icon {
+  font-size: 30px;
+  filter: drop-shadow(0 0 8px rgba(232,255,61,0.55));
+  flex-shrink: 0;
+}
+.feed-game-banner-body { flex: 1; min-width: 0; }
+.feed-game-banner-title {
+  font-family: var(--display);
+  font-size: 22px;
+  color: #e8ff3d;
+  letter-spacing: 1px;
+  line-height: 1;
+  text-shadow: 0 0 14px rgba(232,255,61,0.4);
+}
+.feed-game-banner-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.42);
+  margin-top: 3px;
+}
+.feed-game-banner-score {
+  text-align: right;
+  flex-shrink: 0;
+}
+.feed-game-banner-val {
+  font-family: var(--mono);
+  font-size: 17px;
+  color: #e8ff3d;
+  line-height: 1;
+}
+.feed-game-banner-lbl {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  margin-top: 2px;
+}
+
+/* ━━ Minigame Close Button ━━ */
+.mg-close-btn {
+  position: absolute;
+  top: 56px;
+  right: 14px;
+  z-index: 2001;
+  width: 34px;
+  height: 34px;
+  background: rgba(0,0,0,0.6);
+  border: 1.5px solid rgba(255,255,255,0.18);
+  border-radius: 50%;
+  cursor: pointer;
+  color: rgba(255,255,255,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.mg-close-btn svg { width: 16px; height: 16px; }
+
+/* ━━ Light mode banner overrides ━━ */
+[data-theme="light"] .feed-game-banner {
+  background: linear-gradient(135deg, #f0ffc0 0%, #e8ff8a 100%);
+  border-color: rgba(140,170,0,0.3);
+}
+[data-theme="light"] .feed-game-banner::after {
+  background: linear-gradient(90deg, transparent, rgba(140,170,0,0.1));
+}
+[data-theme="light"] .feed-game-banner-title {
+  color: #6a8000;
+  text-shadow: none;
+}
+[data-theme="light"] .feed-game-banner-sub { color: rgba(0,0,0,0.45); }
+[data-theme="light"] .feed-game-banner-val { color: #6a8000; }
+[data-theme="light"] .feed-game-banner-lbl { color: rgba(0,0,0,0.38); }

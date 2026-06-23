@@ -78,6 +78,17 @@
 
     <!-- Feed view -->
     <div class="view active" id="view-feed">
+      <div class="feed-game-banner" onclick="openMiniGame()">
+        <div class="feed-game-banner-icon">🏎️</div>
+        <div class="feed-game-banner-body">
+          <div class="feed-game-banner-title">REV RUNNER</div>
+          <div class="feed-game-banner-sub">Dodge traffic · Collect nitro · Survive</div>
+        </div>
+        <div class="feed-game-banner-score">
+          <div class="feed-game-banner-val" id="feedGameHi">---</div>
+          <div class="feed-game-banner-lbl">BEST</div>
+        </div>
+      </div>
       <div class="feed" id="feed"></div>
     </div>
 
@@ -776,6 +787,14 @@
 
         <button class="verify-cancel-btn" id="verifyCancelBtn" onclick="closeVerifySheet()">Cancel</button>
       </div>
+    </div>
+
+    <!-- REV RUNNER Minigame -->
+    <div id="minigameScreen" style="display:none;position:absolute;inset:0;z-index:2000;">
+      <canvas id="revCanvas" style="display:block;width:100%;height:100%;touch-action:none;"></canvas>
+      <button class="mg-close-btn" onclick="closeMiniGame()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
 
     <div class="home-bar"></div>
