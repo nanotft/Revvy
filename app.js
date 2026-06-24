@@ -2850,127 +2850,374 @@ function mgDrawRoad(ctx, W, H, HRZ, DASHY) {
   ctx.fillRect(0, HRZ - 4, W, 12);
 }
 
-/* Draw a traffic car from behind — same-direction traffic, you see rear/taillights */
+/* Draw a traffic car from behind — proper 3D with side face, C-pillars, spinning wheels */
 function mgDraw3DCar(ctx, sx, sy, scale, type) {
-  const cw = Math.max(5, scale * 110);
-  const ch = cw * 1.28;
-  const hw = cw / 2;
+  const cw  = Math.max(12, Math.min(scale * 116, mgW * 1.4));
+  const ch  = cw * 1.22;
+  const hw  = cw / 2;
 
-  const cols = {
-    cop:   { body:'#1a2e99', roof:'#10207a', trunk:'#0e1a60' },
-    sedan: { body:'#c82828', roof:'#7a1818', trunk:'#9a2020' },
-    suv:   { body:'#253548', roof:'#16202e', trunk:'#1c2a3a' },
-    sports:{ body:'#d83200', roof:'#8a1e00', trunk:'#b02800' },
+  // Lateral lean → how much side face is visible
+  const lean      = Math.max(-1, Math.min(1, (sx - mgW * 0.5) / (mgW * 0.42)));
+  const sideD     = Math.min(cw * 0.48, Math.abs(lean) * cw * 0.68);
+  const showRight = lean < 0;  // car left of center → we see its right side
+
+  const pal = {
+    cop:    { b:'#1428cc', d:'#0a1888', s:'#061060', r:'#0e1c80', g:'rgba(50,70,200,0.50)' },
+    sedan:  { b:'#c41818', d:'#780e0e', s:'#540a0a', r:'#8c1414', g:'rgba(50,70,160,0.50)' },
+    suv:    { b:'#1e3040', d:'#101c28', s:'#0c1420', r:'#162436', g:'rgba(30,50,90,0.50)'  },
+    sports: { b:'#cc2800', d:'#861800', s:'#601000', r:'#a42000', g:'rgba(40,60,140,0.48)' },
   };
-  const c = cols[type] || cols.sedan;
+  const p = pal[type] || pal.sedan;
 
   ctx.save();
-  ctx.translate(sx, sy);  // sy = bottom of car on road surface
+  ctx.translate(sx, sy);
 
-  // Ground shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.28)';
-  ctx.beginPath(); ctx.ellipse(0, -2, hw * 0.9, cw * 0.09, 0, 0, Math.PI*2); ctx.fill();
+  // ── Ground shadow ──
+  const sgG = ctx.createRadialGradient(0, -4, 0, 0, -4, hw * 1.2);
+  sgG.addColorStop(0, 'rgba(0,0,0,0.45)'); sgG.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = sgG;
+  ctx.beginPath(); ctx.ellipse(0, -3, hw * 1.18, cw * 0.092, 0, 0, Math.PI*2); ctx.fill();
 
-  // Car body
-  ctx.shadowBlur = cw * 0.15; ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowOffsetY = cw * 0.05;
-  ctx.fillStyle = c.body;
-  ctx.beginPath(); ctx.roundRect(-hw, -ch, cw, ch, cw * 0.09); ctx.fill();
-  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  // ── SIDE FACE (drawn first so rear face covers the join) ──
+  if (sideD > 3) {
+    const sNear = showRight ? hw   : -hw;           // rear edge x
+    const sFar  = showRight ? hw + sideD : -hw - sideD;  // front edge x
+    const pRise = sideD * 0.18;                     // front edge rises in perspective
+    const roofNX = showRight ?  hw * 0.72 : -hw * 0.72; // roof corner on this side
+    const roofFX = showRight ? (hw * 0.72 + sideD * 0.82) : (-hw * 0.72 - sideD * 0.82);
 
-  // Trunk / lower rear panel (bottom portion, slightly lighter)
-  const tg = ctx.createLinearGradient(0, -ch * 0.35, 0, 0);
-  tg.addColorStop(0, c.trunk);
-  tg.addColorStop(1, 'rgba(0,0,0,0.18)');
-  ctx.fillStyle = tg;
-  ctx.beginPath(); ctx.roundRect(-hw * 0.94, -ch * 0.35, hw * 1.88, ch * 0.35, cw * 0.05); ctx.fill();
+    // Side body
+    const sbG = ctx.createLinearGradient(sNear, 0, sFar, 0);
+    sbG.addColorStop(0, p.d); sbG.addColorStop(1, p.s);
+    ctx.fillStyle = sbG;
+    ctx.beginPath();
+    ctx.moveTo(sNear,  0);
+    ctx.lineTo(sFar,  -pRise);
+    ctx.lineTo(sFar,  -ch * 0.60 + pRise);
+    ctx.lineTo(sNear, -ch * 0.60);
+    ctx.closePath(); ctx.fill();
 
-  // Roof section
-  ctx.fillStyle = c.roof;
-  ctx.beginPath(); ctx.roundRect(-hw * 0.7, -ch * 0.98, hw * 1.4, ch * 0.44, cw * 0.07); ctx.fill();
+    // Side lower body (below shoulder line, bumper-level)
+    ctx.fillStyle = p.s;
+    ctx.beginPath();
+    ctx.moveTo(sNear, -ch * 0.60);
+    ctx.lineTo(sFar,  -ch * 0.60 + pRise);
+    ctx.lineTo(sFar,  -ch * 0.34 + pRise);
+    ctx.lineTo(sNear, -ch * 0.34);
+    ctx.closePath(); ctx.fill();
 
-  // Rear window (below roof, upper body)
-  ctx.fillStyle = 'rgba(60,80,130,0.55)';
-  ctx.beginPath(); ctx.roundRect(-hw * 0.56, -ch * 0.88, hw * 1.12, ch * 0.28, cw * 0.05); ctx.fill();
-  // Window glare highlight
-  ctx.fillStyle = 'rgba(180,200,255,0.11)';
-  ctx.beginPath(); ctx.roundRect(-hw * 0.50, -ch * 0.86, hw * 0.55, ch * 0.09, cw * 0.03); ctx.fill();
+    // Roof side panel
+    const rsG = ctx.createLinearGradient(roofNX, -ch, roofFX, -ch);
+    rsG.addColorStop(0, p.r); rsG.addColorStop(1, p.s);
+    ctx.fillStyle = rsG;
+    ctx.beginPath();
+    ctx.moveTo(roofNX,  -ch);
+    ctx.lineTo(roofFX,  -ch - pRise * 0.3);
+    ctx.lineTo(sFar,    -ch * 0.60 + pRise);
+    ctx.lineTo(sNear,   -ch * 0.60);
+    ctx.closePath(); ctx.fill();
 
-  // Rear bumper crease
-  ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-  ctx.lineWidth = Math.max(0.8, cw * 0.025);
-  ctx.beginPath(); ctx.moveTo(-hw * 0.9, -ch * 0.12); ctx.lineTo(hw * 0.9, -ch * 0.12); ctx.stroke();
+    // Side window glass
+    const wXn = sNear * 0.80, wXf = sFar * 0.76;
+    const wTop = -ch * 0.58, wBot = -ch * 0.38;
+    ctx.fillStyle = p.g;
+    ctx.beginPath();
+    ctx.moveTo(wXn, wBot);
+    ctx.lineTo(wXf, wBot - pRise * 0.4);
+    ctx.lineTo(wXf, wTop - pRise * 0.4);
+    ctx.lineTo(wXn, wTop);
+    ctx.closePath(); ctx.fill();
+    // Window shine streak
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.beginPath();
+    ctx.moveTo(wXn, wBot); ctx.lineTo(wXn + (wXf-wXn)*0.28, wBot - pRise*0.12);
+    ctx.lineTo(wXn + (wXf-wXn)*0.28, wTop - pRise*0.12); ctx.lineTo(wXn, wTop);
+    ctx.closePath(); ctx.fill();
 
-  // Taillights — red horizontal strips near bottom corners
-  const tlW = hw * 0.26, tlH = ch * 0.07, tlY = -ch * 0.24;
-  const tlGlow = Math.sin(Date.now() / 600) * 0.08 + 0.92;
-  ctx.shadowBlur = hw * 0.45; ctx.shadowColor = `rgba(255,0,0,${tlGlow})`;
-  ctx.fillStyle = `rgba(255,20,20,${tlGlow})`;
-  ctx.beginPath(); ctx.roundRect(-hw * 0.88, tlY, tlW, tlH, cw * 0.03); ctx.fill();
-  ctx.beginPath(); ctx.roundRect( hw * 0.62, tlY, tlW, tlH, cw * 0.03); ctx.fill();
+    // Door panel crease (horizontal line)
+    ctx.strokeStyle = 'rgba(0,0,0,0.38)'; ctx.lineWidth = Math.max(0.6, cw * 0.015);
+    ctx.beginPath();
+    ctx.moveTo(sNear, -ch * 0.36);
+    ctx.lineTo(sFar,  -ch * 0.36 - pRise * 0.5);
+    ctx.stroke();
 
-  // Brake light inner bright
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = 'rgba(255,140,140,0.55)';
-  ctx.beginPath(); ctx.roundRect(-hw * 0.84, tlY + tlH * 0.2, tlW * 0.55, tlH * 0.55, cw * 0.02); ctx.fill();
-  ctx.beginPath(); ctx.roundRect( hw * 0.66, tlY + tlH * 0.2, tlW * 0.55, tlH * 0.55, cw * 0.02); ctx.fill();
+    // Side wheel arch cut
+    const wArcX = showRight ? hw * 0.68 : -hw * 0.68;
+    const wArcR = cw * 0.22;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.beginPath(); ctx.ellipse(wArcX, -wArcR * 0.08, wArcR * 1.05, wArcR * 0.50, 0, Math.PI, 0); ctx.fill();
 
-  // Reverse/center stop light (narrow strip)
-  ctx.fillStyle = 'rgba(255,30,30,0.55)';
-  ctx.beginPath(); ctx.roundRect(-hw * 0.18, tlY, hw * 0.36, tlH * 0.55, 2); ctx.fill();
-
-  // Rear spoiler / trunk lip
-  const spH = ch * 0.045, spY = -ch - spH;
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  ctx.beginPath(); ctx.roundRect(-hw * 0.72, spY, hw * 1.44, spH, 2); ctx.fill();
-  ctx.fillStyle = c.body;
-  ctx.beginPath(); ctx.roundRect(-hw * 0.70, spY - spH*0.5, hw * 1.40, spH*0.55, 2); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 0.8;
-  ctx.beginPath(); ctx.moveTo(-hw*0.70, spY - spH*0.5); ctx.lineTo(hw*0.70, spY - spH*0.5); ctx.stroke();
-
-  // Exhaust pipes (visible at bottom-center rear)
-  [-hw*0.18, hw*0.06].forEach(ex => {
-    ctx.fillStyle = '#3a3a3a';
-    ctx.beginPath(); ctx.ellipse(ex, -ch*0.04, hw*0.065, ch*0.03, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#1a1a1a';
-    ctx.beginPath(); ctx.ellipse(ex, -ch*0.04, hw*0.042, ch*0.018, 0, 0, Math.PI*2); ctx.fill();
-    // Exhaust glow
-    ctx.fillStyle = 'rgba(100,60,20,0.22)';
-    ctx.beginPath(); ctx.ellipse(ex, -ch*0.06, hw*0.12, ch*0.045, 0, 0, Math.PI*2); ctx.fill();
-  });
-
-  // Rear wheel arches (visible at bottom corners)
-  [-hw*0.66, hw*0.66].forEach(wx => {
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.beginPath(); ctx.ellipse(wx, -ch*0.06, hw*0.30, ch*0.12, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#111';
-    ctx.beginPath(); ctx.ellipse(wx, -ch*0.04, hw*0.22, ch*0.09, 0, 0, Math.PI*2); ctx.fill();
-    // Tire tread arc
-    ctx.strokeStyle = 'rgba(60,60,60,0.8)'; ctx.lineWidth = Math.max(1, hw*0.06);
-    ctx.beginPath(); ctx.arc(wx, -ch*0.04, hw*0.18, Math.PI*0.1, Math.PI*0.9); ctx.stroke();
-  });
-
-  // License plate
-  ctx.fillStyle = '#e8e8d0';
-  ctx.beginPath(); ctx.roundRect(-hw * 0.22, -ch * 0.11, hw * 0.44, ch * 0.065, 2); ctx.fill();
-
-  // Cop lightbar
-  if (type === 'cop') {
-    const t = Math.floor(Date.now() / 130) % 2;
-    ctx.shadowBlur = hw * 0.6;
-    ctx.fillStyle  = t ? '#ff1111' : '#1111ff'; ctx.shadowColor = ctx.fillStyle;
-    ctx.fillRect(-hw * 0.36, -ch * 1.055, hw * 0.3,  ch * 0.042);
-    ctx.fillStyle  = t ? '#1111ff' : '#ff1111'; ctx.shadowColor = ctx.fillStyle;
-    ctx.fillRect( hw * 0.06, -ch * 1.055, hw * 0.3,  ch * 0.042);
-    ctx.shadowBlur = 0;
+    // Rear-to-side bevel edge (bright line where faces meet)
+    const bevLW = Math.max(1.5, cw * 0.030);
+    const bevG  = ctx.createLinearGradient(sNear - bevLW, 0, sNear + bevLW, 0);
+    bevG.addColorStop(0, 'rgba(0,0,0,0.15)');
+    bevG.addColorStop(0.4, 'rgba(255,255,255,0.28)');
+    bevG.addColorStop(1,   'rgba(0,0,0,0.05)');
+    ctx.strokeStyle = bevG; ctx.lineWidth = bevLW * 2.2;
+    ctx.beginPath(); ctx.moveTo(sNear, -ch * 0.02); ctx.lineTo(sNear, -ch * 0.98); ctx.stroke();
   }
 
-  // Taillight reflection pool on road below
-  const rdG = ctx.createRadialGradient(0, 0, 0, 0, 0, hw * 1.2);
-  rdG.addColorStop(0,   'rgba(200,0,0,0.28)');
-  rdG.addColorStop(0.5, 'rgba(180,0,0,0.10)');
-  rdG.addColorStop(1,   'rgba(0,0,0,0)');
-  ctx.fillStyle = rdG;
-  ctx.beginPath(); ctx.ellipse(0, 0, hw * 1.2, hw * 0.28, 0, 0, Math.PI*2); ctx.fill();
+  // ── REAR FACE — main body ──
+  ctx.shadowBlur = cw * 0.14; ctx.shadowColor = 'rgba(0,0,0,0.60)'; ctx.shadowOffsetY = cw * 0.04;
+  const bodyG = ctx.createLinearGradient(0, -ch, 0, 0);
+  bodyG.addColorStop(0,    p.d);
+  bodyG.addColorStop(0.08, p.b);
+  bodyG.addColorStop(0.62, p.b);
+  bodyG.addColorStop(0.82, p.d);
+  bodyG.addColorStop(1,    'rgba(0,0,0,0.30)');
+  ctx.fillStyle = bodyG;
+  ctx.beginPath(); ctx.roundRect(-hw, -ch, cw, ch, [cw*0.055, cw*0.055, cw*0.07, cw*0.07]); ctx.fill();
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+  // Body horizontal centre light line (reflection of road lights)
+  const reflG = ctx.createLinearGradient(-hw, -ch*0.50, hw, -ch*0.50);
+  reflG.addColorStop(0,   'rgba(255,255,255,0)');
+  reflG.addColorStop(0.3, 'rgba(255,255,255,0.07)');
+  reflG.addColorStop(0.7, 'rgba(255,255,255,0.07)');
+  reflG.addColorStop(1,   'rgba(255,255,255,0)');
+  ctx.fillStyle = reflG;
+  ctx.fillRect(-hw*0.95, -ch*0.52, cw*0.95, ch*0.03);
+
+  // ── Roof panel (narrower, sits on top of body) ──
+  const roofW = cw * 0.70, roofH = ch * 0.40;
+  const roofXL = -roofW / 2;
+  const roofBodyG = ctx.createLinearGradient(0, -ch - roofH, 0, -ch);
+  roofBodyG.addColorStop(0, p.r); roofBodyG.addColorStop(0.4, p.d); roofBodyG.addColorStop(1, p.d);
+  ctx.fillStyle = roofBodyG;
+  ctx.beginPath(); ctx.roundRect(roofXL, -ch - roofH * 0.02, roofW, roofH + cw*0.025, [roofW*0.10, roofW*0.10, 0, 0]); ctx.fill();
+  // Roof highlight (catches overhead light)
+  const roofHiG = ctx.createLinearGradient(roofXL, -ch - roofH, roofXL + roofW * 0.5, -ch - roofH);
+  roofHiG.addColorStop(0, 'rgba(255,255,255,0)'); roofHiG.addColorStop(0.4, 'rgba(255,255,255,0.08)'); roofHiG.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = roofHiG;
+  ctx.beginPath(); ctx.roundRect(roofXL, -ch - roofH * 0.02, roofW, roofH * 0.25, [roofW*0.10, roofW*0.10, 0, 0]); ctx.fill();
+
+  // ── C-pillars (angled structural bars connecting roof to body sides) ──
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = Math.max(2, cw * 0.038);
+  ctx.beginPath(); ctx.moveTo(roofXL + roofW * 0.04, -ch); ctx.lineTo(-hw * 0.90, -ch * 0.62); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(roofXL + roofW * 0.96, -ch); ctx.lineTo( hw * 0.90, -ch * 0.62); ctx.stroke();
+  ctx.lineCap = 'butt';
+
+  // ── Rear window ──
+  const rwW = roofW * 0.86, rwH = ch * 0.24;
+  const rwX = -rwW / 2;
+  const rwG = ctx.createLinearGradient(rwX, -ch * 0.62, rwX + rwW, -ch * 0.38);
+  rwG.addColorStop(0, 'rgba(25,38,90,0.65)'); rwG.addColorStop(1, 'rgba(15,22,58,0.50)');
+  ctx.fillStyle = rwG;
+  ctx.beginPath(); ctx.roundRect(rwX, -ch * 0.62, rwW, rwH, cw * 0.035); ctx.fill();
+  // Broad glass reflection sweep
+  ctx.fillStyle = 'rgba(255,255,255,0.055)';
+  ctx.beginPath(); ctx.roundRect(rwX + rwW*0.04, -ch*0.615, rwW*0.42, rwH*0.82, cw*0.025); ctx.fill();
+  // Narrow secondary reflection
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
+  ctx.beginPath(); ctx.roundRect(rwX + rwW*0.58, -ch*0.615, rwW*0.10, rwH*0.55, cw*0.01); ctx.fill();
+
+  // ── Shoulder / character line ──
+  ctx.strokeStyle = 'rgba(255,255,255,0.11)'; ctx.lineWidth = Math.max(0.8, cw*0.020);
+  ctx.beginPath(); ctx.moveTo(-hw*0.94, -ch*0.36); ctx.lineTo(hw*0.94, -ch*0.36); ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = Math.max(0.5, cw*0.012);
+  ctx.beginPath(); ctx.moveTo(-hw*0.94, -ch*0.34); ctx.lineTo(hw*0.94, -ch*0.34); ctx.stroke();
+
+  // ── Rear bumper ──
+  const bmpG = ctx.createLinearGradient(0, -ch*0.11, 0, 0);
+  bmpG.addColorStop(0, 'rgba(30,30,40,0.80)'); bmpG.addColorStop(0.55, 'rgba(55,55,68,0.75)'); bmpG.addColorStop(1, 'rgba(18,18,26,0.90)');
+  ctx.fillStyle = bmpG;
+  ctx.beginPath(); ctx.roundRect(-hw*0.96, -ch*0.115, cw*0.96, ch*0.115, [0, 0, cw*0.055, cw*0.055]); ctx.fill();
+  // Diffuser cut (centre dark recess)
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.beginPath(); ctx.roundRect(-hw*0.32, -ch*0.108, hw*0.64, ch*0.085, 2); ctx.fill();
+  // Diffuser fins
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 0.8;
+  for (let fi = -1; fi <= 1; fi++) {
+    const fx = fi * hw * 0.15;
+    ctx.beginPath(); ctx.moveTo(fx, -ch*0.108); ctx.lineTo(fx, -ch*0.023); ctx.stroke();
+  }
+
+  // ── Taillights — full-width LED strips ──
+  const tlY  = -ch * 0.27, tlH2 = ch * 0.072;
+  const glow = 0.88 + 0.12 * Math.sin(Date.now() / 480);
+  // Left strip
+  ctx.shadowBlur = hw * 0.55; ctx.shadowColor = `rgba(255,0,0,${glow})`;
+  const tlLG = ctx.createLinearGradient(-hw*0.92, 0, -hw*0.36, 0);
+  tlLG.addColorStop(0, `rgba(255,8,8,${glow})`); tlLG.addColorStop(0.7, `rgba(255,22,22,${glow})`); tlLG.addColorStop(1, `rgba(190,0,0,${glow*0.65})`);
+  ctx.fillStyle = tlLG;
+  ctx.beginPath(); ctx.roundRect(-hw*0.93, tlY, hw*0.57, tlH2, cw*0.025); ctx.fill();
+  // Right strip
+  const tlRG = ctx.createLinearGradient(hw*0.36, 0, hw*0.92, 0);
+  tlRG.addColorStop(0, `rgba(190,0,0,${glow*0.65})`); tlRG.addColorStop(0.3, `rgba(255,22,22,${glow})`); tlRG.addColorStop(1, `rgba(255,8,8,${glow})`);
+  ctx.fillStyle = tlRG;
+  ctx.beginPath(); ctx.roundRect(hw*0.36, tlY, hw*0.57, tlH2, cw*0.025); ctx.fill();
+  ctx.shadowBlur = 0;
+  // Inner bright core (the actual LED element)
+  ctx.fillStyle = `rgba(255,180,180,${glow * 0.50})`;
+  ctx.beginPath(); ctx.roundRect(-hw*0.90, tlY + tlH2*0.22, hw*0.42, tlH2*0.50, cw*0.015); ctx.fill();
+  ctx.beginPath(); ctx.roundRect( hw*0.48, tlY + tlH2*0.22, hw*0.42, tlH2*0.50, cw*0.015); ctx.fill();
+  // Connecting centre strip (thin)
+  ctx.fillStyle = `rgba(255,10,10,${glow * 0.30})`;
+  ctx.beginPath(); ctx.roundRect(-hw*0.36, tlY + tlH2*0.32, hw*0.72, tlH2*0.30, 1); ctx.fill();
+
+  // High-mount centre stop light
+  ctx.shadowBlur = 5; ctx.shadowColor = '#ff0000';
+  ctx.fillStyle = `rgba(255,35,35,${glow * 0.72})`;
+  ctx.beginPath(); ctx.roundRect(-hw*0.15, -ch*0.645, hw*0.30, ch*0.032, 2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // ── Rear spoiler ──
+  const spBY = -ch - ch * 0.06;  // bottom of blade
+  const spTY = spBY - ch * 0.07; // top of blade
+  // Spoiler support pylons
+  ctx.fillStyle = p.d;
+  [-hw*0.46, hw*0.30].forEach(px => {
+    ctx.beginPath(); ctx.roundRect(px, spBY, hw*0.16, ch*0.06, 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.roundRect(px, spBY, hw*0.16, ch*0.06, 2); ctx.stroke();
+  });
+  // Blade underside (dark shadow)
+  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  ctx.beginPath(); ctx.roundRect(-hw*0.72, spBY - ch*0.008, hw*1.44, ch*0.012, 1); ctx.fill();
+  // Blade body
+  const spBladeG = ctx.createLinearGradient(0, spTY, 0, spBY);
+  spBladeG.addColorStop(0, p.d); spBladeG.addColorStop(0.6, p.b); spBladeG.addColorStop(1, p.r);
+  ctx.fillStyle = spBladeG;
+  ctx.beginPath(); ctx.roundRect(-hw*0.70, spTY, hw*1.40, spBY - spTY, [cw*0.025, cw*0.025, 0, 0]); ctx.fill();
+  // Blade top highlight
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = Math.max(0.8, cw*0.018);
+  ctx.beginPath(); ctx.moveTo(-hw*0.68, spTY + 1); ctx.lineTo(hw*0.68, spTY + 1); ctx.stroke();
+  // End plates
+  ctx.fillStyle = p.s;
+  ctx.beginPath(); ctx.roundRect(-hw*0.72, spTY, hw*0.16, spBY-spTY+ch*0.04, [1,1,2,2]); ctx.fill();
+  ctx.beginPath(); ctx.roundRect( hw*0.56, spTY, hw*0.16, spBY-spTY+ch*0.04, [1,1,2,2]); ctx.fill();
+
+  // ── Exhaust pipes ──
+  [-hw*0.20, hw*0.04].forEach(ex => {
+    // Outer pipe ring
+    ctx.fillStyle = '#303030';
+    ctx.beginPath(); ctx.ellipse(ex, -ch*0.043, hw*0.075, ch*0.033, 0, 0, Math.PI*2); ctx.fill();
+    // Chrome inner
+    const exG = ctx.createRadialGradient(ex - hw*0.02, -ch*0.038, 0, ex, -ch*0.043, hw*0.055);
+    exG.addColorStop(0, '#909090'); exG.addColorStop(0.5, '#404040'); exG.addColorStop(1, '#181818');
+    ctx.fillStyle = exG;
+    ctx.beginPath(); ctx.ellipse(ex, -ch*0.043, hw*0.052, ch*0.022, 0, 0, Math.PI*2); ctx.fill();
+    // Heat shimmer glow
+    ctx.fillStyle = 'rgba(160,70,10,0.22)';
+    ctx.beginPath(); ctx.ellipse(ex, -ch*0.072, hw*0.14, ch*0.055, 0, 0, Math.PI*2); ctx.fill();
+  });
+
+  // ── Rear wheels — full 3D cylinder ──
+  const wR   = cw * 0.225;  // wheel radius
+  const wCXs = [-hw * 0.70, hw * 0.70];  // wheel centers x
+  const wCY  = -wR * 0.06;               // slightly above ground
+  const wSpin = mg.scrollZ * 0.10;        // rotation from travel distance
+
+  wCXs.forEach((wcx, idx) => {
+    const isRight = idx === 1;
+    const cylDepth = Math.max(0, (isRight === showRight) ? sideD * 0.55 : 0);
+
+    // Wheel arch opening in body
+    ctx.fillStyle = '#090a0d';
+    ctx.beginPath(); ctx.ellipse(wcx, wCY, wR * 1.08, wR * 0.56, 0, Math.PI * 0.04, Math.PI * 0.96); ctx.fill();
+
+    // Cylinder depth (side of tire, if visible)
+    if (cylDepth > 2) {
+      const cDirX = isRight ? cylDepth : -cylDepth;
+      ctx.fillStyle = '#111114';
+      ctx.beginPath();
+      ctx.arc(wcx, wCY, wR, Math.PI * 0.08, Math.PI * 0.92);
+      ctx.lineTo(wcx + cDirX, wCY + Math.sin(Math.PI * 0.92) * wR);
+      ctx.arc(wcx + cDirX, wCY, wR, Math.PI * 0.92, Math.PI * 0.08, true);
+      ctx.closePath(); ctx.fill();
+    }
+
+    // Tire face
+    ctx.fillStyle = '#141416';
+    ctx.beginPath(); ctx.arc(wcx, wCY, wR, 0, Math.PI*2); ctx.fill();
+
+    // Tyre sidewall rings (tread lines)
+    ctx.strokeStyle = '#222224'; ctx.lineWidth = Math.max(1.2, wR * 0.115);
+    ctx.beginPath(); ctx.arc(wcx, wCY, wR * 0.88, 0, Math.PI*2); ctx.stroke();
+    ctx.strokeStyle = '#1e1e20'; ctx.lineWidth = Math.max(0.6, wR * 0.060);
+    ctx.beginPath(); ctx.arc(wcx, wCY, wR * 0.73, 0, Math.PI*2); ctx.stroke();
+
+    // Rim — metallic radial gradient
+    const rimG = ctx.createRadialGradient(
+      wcx - wR*0.22, wCY - wR*0.22, 0,
+      wcx, wCY, wR * 0.64);
+    rimG.addColorStop(0,   '#9a9aaa');
+    rimG.addColorStop(0.25,'#6c6c7c');
+    rimG.addColorStop(0.55,'#424255');
+    rimG.addColorStop(0.85,'#2a2a3a');
+    rimG.addColorStop(1,   '#1c1c2a');
+    ctx.fillStyle = rimG;
+    ctx.beginPath(); ctx.arc(wcx, wCY, wR * 0.64, 0, Math.PI*2); ctx.fill();
+
+    // Rim bevel edge
+    ctx.strokeStyle = 'rgba(160,160,180,0.30)'; ctx.lineWidth = Math.max(1, wR*0.055);
+    ctx.beginPath(); ctx.arc(wcx, wCY, wR * 0.64, 0, Math.PI*2); ctx.stroke();
+
+    // Spokes — 5-spoke (spinning with travel distance)
+    ctx.lineCap = 'round';
+    for (let sp = 0; sp < 5; sp++) {
+      const sa = (sp / 5) * Math.PI * 2 + wSpin;
+      // Spoke shadow
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = Math.max(2, wR*0.11);
+      ctx.beginPath();
+      ctx.moveTo(wcx + Math.cos(sa)*wR*0.12, wCY + Math.sin(sa)*wR*0.12);
+      ctx.lineTo(wcx + Math.cos(sa)*wR*0.57, wCY + Math.sin(sa)*wR*0.57);
+      ctx.stroke();
+      // Spoke body
+      const spG2 = ctx.createLinearGradient(
+        wcx + Math.cos(sa)*wR*0.13, wCY + Math.sin(sa)*wR*0.13,
+        wcx + Math.cos(sa)*wR*0.56, wCY + Math.sin(sa)*wR*0.56);
+      spG2.addColorStop(0, '#8a8a9a'); spG2.addColorStop(1, '#505060');
+      ctx.strokeStyle = spG2; ctx.lineWidth = Math.max(1.2, wR*0.075);
+      ctx.beginPath();
+      ctx.moveTo(wcx + Math.cos(sa)*wR*0.13, wCY + Math.sin(sa)*wR*0.13);
+      ctx.lineTo(wcx + Math.cos(sa)*wR*0.56, wCY + Math.sin(sa)*wR*0.56);
+      ctx.stroke();
+    }
+    ctx.lineCap = 'butt';
+
+    // Centre hub cap
+    const hubCG = ctx.createRadialGradient(wcx - wR*0.06, wCY - wR*0.06, 0, wcx, wCY, wR*0.16);
+    hubCG.addColorStop(0, '#c0c0cc'); hubCG.addColorStop(0.5, '#707080'); hubCG.addColorStop(1, '#383848');
+    ctx.fillStyle = hubCG;
+    ctx.beginPath(); ctx.arc(wcx, wCY, wR*0.16, 0, Math.PI*2); ctx.fill();
+
+    // Brake disc glow (hot brakes)
+    ctx.fillStyle = 'rgba(90,35,10,0.22)';
+    ctx.beginPath(); ctx.arc(wcx, wCY, wR*0.36, 0, Math.PI*2); ctx.fill();
+  });
+
+  // ── License plate ──
+  ctx.fillStyle = '#dde0cc';
+  ctx.beginPath(); ctx.roundRect(-hw*0.22, -ch*0.125, hw*0.44, ch*0.068, 2); ctx.fill();
+  ctx.fillStyle = '#22244a';
+  ctx.font = `bold ${Math.max(4, ch*0.036)}px "DM Mono", monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('REV', 0, -ch*0.125 + ch*0.034);
+
+  // ── Cop lightbar ──
+  if (type === 'cop') {
+    const t = Math.floor(Date.now() / 115) % 2;
+    const lbY = -ch - ch * 0.22;
+    ctx.shadowBlur = hw * 0.70;
+    ctx.fillStyle = t ? '#ff1111' : '#1111ff'; ctx.shadowColor = ctx.fillStyle;
+    ctx.beginPath(); ctx.roundRect(-hw*0.38, lbY, hw*0.32, ch*0.048, 3); ctx.fill();
+    ctx.fillStyle = t ? '#1111ff' : '#ff1111'; ctx.shadowColor = ctx.fillStyle;
+    ctx.beginPath(); ctx.roundRect( hw*0.06, lbY, hw*0.32, ch*0.048, 3); ctx.fill();
+    ctx.shadowBlur = 0;
+    // Lightbar housing
+    ctx.fillStyle = 'rgba(20,20,30,0.70)';
+    ctx.beginPath(); ctx.roundRect(-hw*0.42, lbY - ch*0.005, hw*0.84, ch*0.055, 4); ctx.fill();
+  }
+
+  // ── Road taillight glow ──
+  const rGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, hw * 1.35);
+  rGlow.addColorStop(0,   'rgba(220,0,0,0.32)');
+  rGlow.addColorStop(0.45,'rgba(180,0,0,0.12)');
+  rGlow.addColorStop(1,   'rgba(0,0,0,0)');
+  ctx.fillStyle = rGlow;
+  ctx.beginPath(); ctx.ellipse(0, 0, hw*1.35, hw*0.30, 0, 0, Math.PI*2); ctx.fill();
 
   ctx.restore();
 }
